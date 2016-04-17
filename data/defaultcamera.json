@@ -1,0 +1,11 @@
+
+"entity": 
+{
+	"pattern" : "Camera",
+	"camera": 
+	{
+		"fov"	: 55.0,
+		"near"	: 0.01
+		"far"	: 100.0
+	}
+}

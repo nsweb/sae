@@ -1,0 +1,12 @@
+
+"entity": 
+{
+  "pattern": "Attractor",
+  "Position": 
+  {
+  }
+  "Attractor": 
+  {
+	"type"	: "DequanLi"
+  }
+}
