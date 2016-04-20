@@ -22,31 +22,31 @@ class StrangeAttractor
 public:
 	eAttractorType	m_type;
 	vec3			m_init_point;
-	int32			m_max_iter;
+	//int32			m_max_iter;
 	float			m_fatness_scale;
 	float			m_dt;
 	float			m_adaptative_dist;
 
 	StrangeAttractor() : m_dt(0.01f) {}
     virtual ~StrangeAttractor() {}
-	virtual void Loop( Array<vec3>& out_pos ) const
+	virtual void Loop( Array<vec3>& out_pos, int32 iter_count ) const
 	{
 		vec3 P(m_init_point), DP;
 
-		for( int32 i=0; i<m_max_iter; i++ ) 
+		for (int32 i = 0; i < iter_count; i++)
 		{
 			GetDerivatives( P, DP );
 			P += DP * m_dt;
 			out_pos.push_back( P );
 		}
 	}
-	virtual void LoopAdaptative(Array<vec3>& out_pos) const
+	virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count) const
 	{
 		vec3 P( m_init_point ), DP;
 		float DRatio, Len;
 		float AdDt = bigball::abs(m_adaptative_dist / m_dt);
 
-		for( int32 i=0; i<m_max_iter; i++ ) 
+		for (int32 i = 0; i < iter_count; i++)
 		{
 			
 			GetDerivatives( P, DP );
@@ -57,12 +57,12 @@ public:
 			out_pos.push_back( P );
 		}
 	}
-	virtual void LoopCurl(Array<vec3>& out_pos) const
+	virtual void LoopCurl(Array<vec3>& out_pos, int32 iter_count) const
 	{
 		const float Eps = m_dt*0.1f;
 		vec3 P( m_init_point ), DPx0, DPx1, DPy0, DPy1, DPz0, DPz1, PCurl;
 
-		for( int32 i=0; i<m_max_iter; i++ ) 
+		for (int32 i = 0; i < iter_count; i++)
 		{
 			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), DPx0 );
 			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), DPx1 );
@@ -79,12 +79,12 @@ public:
 			out_pos.push_back( P );
 		}
 	}
-	virtual void LoopGradient(Array<vec3>& out_pos) const
+	virtual void LoopGradient(Array<vec3>& out_pos, int32 iter_count) const
 	{
 		const float Eps = m_dt*0.1f;
 		vec3 P( m_init_point ), DPx0, DPx1, DPy0, DPy1, DPz0, DPz1, PN;
 
-		for( int32 i=0; i<m_max_iter; i++ ) 
+		for (int32 i = 0; i < iter_count; i++)
 		{
 			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), DPx0 );
 			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), DPx1 );
@@ -120,7 +120,7 @@ public:
 		m_beta = 8.0f / 3.0f;
 
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
-		m_max_iter = 2000;
+		//m_max_iter = 2000;
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
@@ -154,7 +154,7 @@ public:
 		m_gamma = -1;
 
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
-		m_max_iter = 2000;
+		//m_max_iter = 2000;
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
@@ -187,7 +187,7 @@ public:
 		m_gamma = -0.38f;
 
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
-		m_max_iter = 2000;
+		//m_max_iter = 2000;
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
@@ -223,7 +223,7 @@ public:
 		m_f = 0.1f;
 
 		m_init_point = vec3( 0.1f, 0.0f, 0.0f );
-		m_max_iter = 10000;
+		//m_max_iter = 10000;
 		// curl :
 		//m_max_iter = 451;
 		m_fatness_scale = 0.05f;
@@ -258,7 +258,7 @@ public:
 		m_g = 20.0f;
 
 		m_init_point = vec3( 0.1f, 0.0f, 0.0f );
-		m_max_iter = 1000;
+		//m_max_iter = 1000;
 		m_fatness_scale = 0.01f;
 		m_dt = 0.001f;
 		m_adaptative_dist = 0.24f;
@@ -290,7 +290,7 @@ public:
 		m_xhi = 20.0f;
 
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
-		m_max_iter = 2000;
+		//m_max_iter = 2000;
 
 		m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
@@ -322,7 +322,7 @@ public:
 		m_gamma = 9.9f;
 
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
-		m_max_iter = 2000;
+		//m_max_iter = 2000;
 
 		m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
@@ -350,38 +350,68 @@ public:
 	AttractorShape() : attractor(nullptr) { }
 };
 
-
-struct AttractorShapeParams
+struct AttractorLineParams
 {
-	float fatness_scale;
-	bool weld_vertex;
-	int32 merge_start;
-	int32 merge_end;
-	int32 simplify_level;
-	int32 local_edge_count;
-	float crease_depth;
-	float crease_width;
-	float crease_bevel;
+	vec3 seed;
+	int32 iter;
+	int32 rev_iter;
+	int32 warmup_iter;
+	float step_factor;
+	float target_dim; 
 
 	// shape shearing
 	float shearing_angle;
 	float shearing_scale_x;
 	float shearing_scale_y;
 
+	AttractorLineParams() :
+		seed(1.f, 1.f, 1.f),
+		iter(2000),
+		rev_iter(0),
+		warmup_iter(200),
+		step_factor(4.f),
+		target_dim(0.f),
+		shearing_angle(0.f),
+		shearing_scale_x(1.f),
+		shearing_scale_y(1.f)
+	{}
+
+	bool operator == (AttractorLineParams& oth)
+	{
+		return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && warmup_iter == oth.warmup_iter && step_factor == oth.step_factor 
+			&& target_dim == oth.target_dim && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
+	}
+};
+
+struct AttractorShapeParams
+{
+	float fatness_scale;
+	bool weld_vertex;
+	//int32 merge_start;
+	//int32 merge_end;
+	int32 simplify_level;
+	int32 local_edge_count;
+	float crease_depth;
+	float crease_width;
+	float crease_bevel;
+
 	AttractorShapeParams() :
 		fatness_scale(1.0f),
 		weld_vertex(true),
-		merge_start(0),
-		merge_end(0),
+		//merge_start(0),
+		//merge_end(0),
 		simplify_level(1),
 		local_edge_count(5),
 		crease_depth(0.0f),
 		crease_width(0.0f),
-		crease_bevel(0.0f),
-		shearing_angle(0.0f),
-		shearing_scale_x(1.0f),
-		shearing_scale_y(1.0f)
+		crease_bevel(0.0f)
 	{}
+
+	bool operator == (AttractorShapeParams& oth)
+	{
+		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
+			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel;
+	}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -390,7 +420,7 @@ struct AttractorShapeParams
 namespace SAUtils
 {
 
-	void		ComputeStrangeAttractorPoints(StrangeAttractor* attractor, vec3 seed, int32 iter, int32 rev_iter, int32 skip_iter, float step_factor, float target_dim, float shearing_angle, float shearing_scale_x, float shearing_scale_y, Array<vec3>& line_points /*out*/);
+	void		ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
 	void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
 	void		ComputeStrangeAttractorCurl();
 	void		ComputeStrangeAttractorGradient();

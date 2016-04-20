@@ -2,6 +2,7 @@
 
 #include "../sae.h"
 #include "coattractor.h"
+#include "cohandle.h"
 
 #include "core/json.h"
 #include "math/intersections.h"
@@ -16,19 +17,12 @@
 #include "gfx/rendercontext.h"
 
 
-
 CLASS_EQUIP_CPP(CoAttractor);
 
 CoAttractor::CoAttractor() :
 	m_attractor(nullptr),
     m_min_box(0.f, 0.f, 0.f),
-    m_max_box(0.f, 0.f, 0.f),
-	m_seed(-1.f, -1.f, 1.f),
-	m_iter(8000),
-	m_rev_iter(0),
-	m_skip_iter(100),
-	m_step_factor(4.0f),
-	m_target_dim(0.f)
+    m_max_box(0.f, 0.f, 0.f)
 {
 	Memory::MemZero(m_varrays);
 	Memory::MemZero(m_vbuffers);
@@ -83,21 +77,34 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
     RebuildAttractorMesh();
 }
 
-void CoAttractor::RebuildAttractorMesh()
+void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 {
 	m_line_points.clear();
 	m_tri_vertices.clear();
 	m_tri_normals.clear();
 	m_tri_indices.clear();
-    
-    if (!m_attractor)
+ 
+	CoHandle* cohandle = static_cast<CoHandle*>(GetEntityComponent("CoHandle"));
+	if (!m_attractor || !cohandle)
         return;
+	
+	if (force_rebuild || !(m_line_params == m_prev_line_params))
+	{
+		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
+	}
 
-	SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_seed, m_iter, m_rev_iter, m_skip_iter, m_step_factor, m_target_dim, m_params.shearing_angle, m_params.shearing_scale_x, m_params.shearing_scale_y, m_line_points);
+	// enforce cohandle ends
+	while (cohandle->m_handles.size() < 2)
+		cohandle->m_handles.push_back(MeshHandle());
 
-	//AttractorShapeParams Params;
-    m_params.weld_vertex = false;
-	SAUtils::GenerateSolidMesh(m_line_points, m_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+	cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
+	cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
+
+	if (force_rebuild || !(m_shape_params == m_prev_shape_params) || cohandle->HasHandleArrayChanged())
+	{
+		m_shape_params.weld_vertex = false;
+		SAUtils::GenerateSolidMesh(m_line_points, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+	}
     
     vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
     vec3 max_box(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -121,6 +128,11 @@ void CoAttractor::RebuildAttractorMesh()
     copos->SetTransform( t );
 
 	UpdateVertexBuffers();
+
+	// save current params
+	m_prev_line_params = m_line_params;
+	m_prev_shape_params = m_shape_params;
+	cohandle->SaveHandleArray();
 }
 
 void CoAttractor::UpdateVertexBuffers()
@@ -199,7 +211,7 @@ bool CoAttractor::RayCast(RayCastParams const& params, RayCastResults& results)
         
 		// square dist to segment
         float t;
-        float sq_dist = intersect::SquaredDistancePointSegment( point, seg0, seg1, t );
+		float sq_dist = intersect::SquaredDistancePointSegment(point, seg0, seg1, t);
         if (sq_dist < sq_width && t < min_t)
         {
             min_t = t;

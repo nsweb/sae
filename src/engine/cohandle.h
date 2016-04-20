@@ -21,7 +21,24 @@ public:
 	MeshHandle()	{}
 	~MeshHandle()	{}
 
+	bool operator == (MeshHandle const& oth)
+	{
+		return m_transform == oth.m_transform
+			&& m_type == oth.m_type && m_init_idx == oth.m_init_idx && m_real_idx == oth.m_real_idx;
+	}
+
+	enum eHandleType
+	{
+		eHT_PassThrough,
+		eHT_Interp,
+		eHT_Begin,
+		eHT_End,
+	};
+
 	transform	m_transform;
+	eHandleType	m_type;
+	int32		m_init_idx;
+	int32		m_real_idx;
 };
 
 class CoHandle : public Component 
@@ -41,10 +58,12 @@ public:
 	virtual void		Tick( TickContext& tick_ctxt );
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
-    
+	bool				HasHandleArrayChanged();
+	void				SaveHandleArray();
 
 public:
 	Array<MeshHandle>	m_handles;
+	Array<MeshHandle>	m_prev_handles;
 
 };
 

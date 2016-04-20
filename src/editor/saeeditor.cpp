@@ -13,13 +13,15 @@
 #include "gfx/drawutils.h"
 #include "../engine/attractormanager.h"
 #include "../engine/coattractor.h"
+#include "../engine/cohandle.h"
 #include "../engine/saecamera.h"
 
 
 SAEEditor* SAEEditor::ms_peditor = nullptr;
 
 SAEEditor::SAEEditor() :
-    m_current_attractor_type(INDEX_NONE)
+    m_current_attractor_type(INDEX_NONE),
+	m_current_handle_idx(INDEX_NONE)
 {
     ms_peditor = this;
 }
@@ -285,30 +287,29 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
     if( ImGui::CollapsingHeader("Params") )
     {
-		bool need_rebuild = false;
-		need_rebuild |= ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_seed);
+		ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_line_params.seed);
 
 		ImGui::PushItemWidth(125);
-		ImGui::InputInt("Iteration steps", &attractor->m_iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
-		ImGui::InputInt("Reverse iter. steps", &attractor->m_rev_iter, 1, 100);
-		ImGui::InputInt("Skip iter. steps", &attractor->m_skip_iter, 1, 100);
-		ImGui::InputFloat("Step size", &attractor->m_step_factor);
-        ImGui::InputInt("Simplify step", &attractor->m_params.simplify_level, 1, 10);
+		ImGui::InputInt("Iteration steps", &attractor->m_line_params.iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
+		ImGui::InputInt("Reverse iter. steps", &attractor->m_line_params.rev_iter, 1, 100);
+		ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
+		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
+		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 
 		ImGui::Separator();
         
-        ImGui::InputFloat("Line fatness", &attractor->m_params.fatness_scale);
-        ImGui::InputInt("Edge count", &attractor->m_params.local_edge_count, 1, 10);
-        ImGui::InputFloat("Crease depth", &attractor->m_params.crease_depth);
-        ImGui::InputFloat("Crease width", &attractor->m_params.crease_width);
-        ImGui::InputFloat("crease bevel", &attractor->m_params.crease_bevel);
+        ImGui::InputFloat("Line fatness", &attractor->m_shape_params.fatness_scale);
+		ImGui::InputInt("Edge count", &attractor->m_shape_params.local_edge_count, 1, 10);
+		ImGui::InputFloat("Crease depth", &attractor->m_shape_params.crease_depth);
+		ImGui::InputFloat("Crease width", &attractor->m_shape_params.crease_width);
+		ImGui::InputFloat("crease bevel", &attractor->m_shape_params.crease_bevel);
 
 		ImGui::Separator();
 
-		ImGui::InputFloat("Target dimension", &attractor->m_target_dim);
-		ImGui::SliderAngle("Shearing angle", &attractor->m_params.shearing_angle, -90.f, 90.f);
-		ImGui::InputFloat("Shearing scale x", &attractor->m_params.shearing_scale_x, 0.01, 0.05, 3);
-		ImGui::InputFloat("Shearing scale y", &attractor->m_params.shearing_scale_y, 0.01, 0.05, 3);
+		ImGui::InputFloat("Target dimension", &attractor->m_line_params.target_dim);
+		ImGui::SliderAngle("Shearing angle", &attractor->m_line_params.shearing_angle, -90.f, 90.f);
+		ImGui::InputFloat("Shearing scale x", &attractor->m_line_params.shearing_scale_x, 0.01f, 0.05f, 3);
+		ImGui::InputFloat("Shearing scale y", &attractor->m_line_params.shearing_scale_y, 0.01f, 0.05f, 3);
 
 		ImGui::PopItemWidth();
 
@@ -330,10 +331,39 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     
     if (ImGui::CollapsingHeader("Modifications"))
     {
+		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+		int32 num_handles = cohandle->m_handles.size();
+
+		ImGui::PushItemWidth(50);
+		Array<String> str_handle_array;
+		for (int32 h_idx = 0; h_idx < num_handles; h_idx++)
+		{
+			str_handle_array.push_back(String::Printf("%d", h_idx));
+		}
+
+		if (ImGui::ListBox("Handles", &m_current_handle_idx, GetItemStringArray, &str_handle_array, str_handle_array.size(), 6))
+		{
+			if (m_current_handle_idx >= 0 && m_current_handle_idx < str_handle_array.size())
+			{
+				//SAEWorld::GetStaticInstance()->SetCurrentLevel(m_current_lvl_idx);
+				//level = SAEWorld::GetStaticInstance()->GetCurrentLevel();
+				//pcopath = level ? static_cast<CoPath*>(level->GetEntityComponent(CoPath::StaticClass())) : nullptr;
+				//pcoship->SetCurrentLevel(level->GetEntity());
+			}
+		}
+		ImGui::PopItemWidth();
+
+		if (m_current_handle_idx >= 0 && m_current_handle_idx < num_handles)
+		{
+
+		}
+
+
+
         int mouse_x, mouse_y;
         SDL_GetMouseState( &mouse_x, &mouse_y );
-        float screen_width = g_pEngine->GetDisplayMode().w;
-        float screen_height = g_pEngine->GetDisplayMode().h;
+        float screen_width = (float) g_pEngine->GetDisplayMode().w;
+        float screen_height = (float) g_pEngine->GetDisplayMode().h;
         float s_x = (2.0f * mouse_x) / screen_width - 1.0f;
         float s_y = 1.0f - (2.0f * mouse_y) / screen_height;
         vec4 ray_clip = vec4( s_x, s_y, -1.f, 1.f );
@@ -352,13 +382,13 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         RayCastParams params;
         params.m_start  = cam_pos;
         params.m_end    = ray_end;
-        params.m_capsule_width = attractor->m_params.fatness_scale;
+        params.m_capsule_width = attractor->m_shape_params.fatness_scale;
         
         RayCastResults results;
         if( attractor->RayCast(params, results) )
         {
             CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-            const float cube_size = copos->GetScale() * attractor->m_params.fatness_scale;
+			const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
             DrawUtils::GetStaticInstance()->PushAABB(results.m_hit, cube_size, u8vec4(255,0,255,255));
         }
     }

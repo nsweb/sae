@@ -47,7 +47,7 @@ public:
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
     
     void                ChangeAttractorType(eAttractorType type);
-	void				RebuildAttractorMesh();
+	void				RebuildAttractorMesh(bool force_rebuild = false);
     eAttractorType      GetAttractorType()   { return m_attractor ? m_attractor->m_type : eAttractor_None; }
 
 	bool				RayCast(RayCastParams const& params, RayCastResults& results);
@@ -63,13 +63,10 @@ public:
     vec3                    m_max_box;
 
 	// Attractor params
-    AttractorShapeParams    m_params;
-	vec3                    m_seed;
-	int32                   m_iter;
-	int32                   m_rev_iter;
-	int32                   m_skip_iter;
-	float                   m_step_factor;
-	float                   m_target_dim;
+	AttractorLineParams		m_line_params;
+	AttractorLineParams		m_prev_line_params;
+    AttractorShapeParams    m_shape_params;
+	AttractorShapeParams    m_prev_shape_params;
 
 	enum eVAType
 	{

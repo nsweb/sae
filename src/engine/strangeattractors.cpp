@@ -11,14 +11,13 @@ void SAUtils::ComputeStrangeAttractorGradient()
 
 	AizawaAttractor att0;
 	S0.attractor = &att0;
-	S0.attractor->m_max_iter = 3000;
 
 	AttractorShapeParams params;
 	Array<vec3> local_shape;
 	GenerateLocalShape( local_shape, params );
 	const int32 num_local_points = local_shape.size();
 
-	S0.attractor->Loop( S0.line_points );
+	S0.attractor->Loop(S0.line_points, 3000);
 
 	init_shapes.resize( S0.line_points.size() / 10 );
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
@@ -26,8 +25,7 @@ void SAUtils::ComputeStrangeAttractorGradient()
 		AttractorShape& S = init_shapes[ShapeIdx];
 		S.attractor = &att0;
 		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-		S.attractor->m_max_iter = 200;
-		S.attractor->LoopGradient( S.line_points );
+		S.attractor->LoopGradient(S.line_points, 200);
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
@@ -60,7 +58,7 @@ void SAUtils::ComputeStrangeAttractorCurl()
 	GenerateLocalShape( local_shape, params );
 	const int32 num_local_points = local_shape.size();
 
-	S0.attractor->Loop( S0.line_points );
+	S0.attractor->Loop(S0.line_points, 2000);
 
 	init_shapes.resize( S0.line_points.size() / 10 );
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
@@ -68,8 +66,7 @@ void SAUtils::ComputeStrangeAttractorCurl()
 		AttractorShape& S = init_shapes[ShapeIdx];
 		S.attractor = &att0;
 		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-		S.attractor->m_max_iter = 200;
-		S.attractor->LoopCurl( S.line_points );
+		S.attractor->LoopCurl( S.line_points, 200 );
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
@@ -86,21 +83,29 @@ void SAUtils::ComputeStrangeAttractorCurl()
 	WriteObjFile( filename.c_str(), init_shapes );
 }
 
-void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, vec3 seed, int32 iter, int32 rev_iter, int32 skip_iter, float step_factor, float target_dim, float shearing_angle, float shearing_scale_x, float shearing_scale_y, Array<vec3>& line_points)
+void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points)
 {
+	vec3 seed = params.seed;
 	attractor->m_init_point = seed;
 
 	float init_dt = attractor->m_dt;
 	float init_ad = attractor->m_adaptative_dist;
 
-	attractor->m_dt = init_dt * step_factor;
-	attractor->m_adaptative_dist = init_ad * step_factor;
+	attractor->m_dt = init_dt * params.step_factor;
+	attractor->m_adaptative_dist = init_ad * params.step_factor;
 
-	if( rev_iter > 0 )
+	if (params.warmup_iter > 0)
 	{
-		attractor->m_max_iter = rev_iter;
+		attractor->LoopAdaptative(line_points, params.warmup_iter);
+		seed = line_points.Last();
+		attractor->m_init_point = line_points.Last();
+		line_points.clear();
+	}
+
+	if (params.rev_iter > 0)
+	{
 		attractor->m_dt = -attractor->m_dt;
-		attractor->LoopAdaptative( line_points );
+		attractor->LoopAdaptative(line_points, params.rev_iter);
 		
         const int32 nb_point = line_points.size();
         for( int32 i=0; i < nb_point/2; i++ )
@@ -110,32 +115,31 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, vec3 se
 		attractor->m_dt = -attractor->m_dt;
 	}
 
-	attractor->m_max_iter = iter;
-	attractor->LoopAdaptative( line_points );
+	attractor->LoopAdaptative(line_points, params.iter);
 
-	if( skip_iter > 0 )
-	{
-		skip_iter = min( skip_iter, (int32)line_points.size()-2 );
-        line_points.erase(0,skip_iter);
-	}
+	//if( skip_iter > 0 )
+	//{
+	//	skip_iter = min( skip_iter, (int32)line_points.size()-2 );
+ //       line_points.erase(0,skip_iter);
+	//}
 
-	if (shearing_scale_x != 1.f || shearing_scale_y != 1.f || shearing_angle != 0.f)
+	if (params.shearing_scale_x != 1.f || params.shearing_scale_y != 1.f || params.shearing_angle != 0.f)
 	{ 
-		const float cf = bigball::cos(shearing_angle);
-		const float sf = bigball::sin(shearing_angle);
+		const float cf = bigball::cos(params.shearing_angle);
+		const float sf = bigball::sin(params.shearing_angle);
 
 		for (int32 i = 0; i < line_points.size(); ++i)
 		{
 			vec3 p = line_points[i];
-			float rot_x = shearing_scale_x * (p.x * cf - p.y * sf);
-			float rot_y = shearing_scale_y * (p.x * sf + p.y * cf);
+			float rot_x = params.shearing_scale_x * (p.x * cf - p.y * sf);
+			float rot_y = params.shearing_scale_y * (p.x * sf + p.y * cf);
 			line_points[i].x = rot_x * cf + rot_y * sf;
 			line_points[i].y = rot_x * -sf + rot_y * cf;
 		}
 	}
 
 	// Adapt size
-	if( target_dim > 0.0 )
+	if (params.target_dim > 0.0)
 	{
 		vec3 min_pos( FLT_MAX, FLT_MAX, FLT_MAX ), max_pos( -FLT_MAX, -FLT_MAX, -FLT_MAX );
 		for( int32 i = 0; i < line_points.size(); ++i )
@@ -149,7 +153,7 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, vec3 se
 		}
 		vec3 V = max_pos - min_pos;
 		float dim_max = max( max( V.x, V.y ), V.z );
-		float rescale = target_dim / dim_max;
+		float rescale = params.target_dim / dim_max;
 		for( int32 i = 0; i < line_points.size(); ++i )
 			 line_points[i] *= rescale;
 	}
@@ -194,7 +198,6 @@ void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, in
 	AttractorShape AS0;
 	AS0.attractor = attractor;
 	AS0.attractor->m_init_point = seed;
-	AS0.attractor->m_max_iter = iter;
 
 	//AS1.Attractor = &Att1;
 	//AS1.m_max_iter = m_max_iter;
@@ -209,7 +212,7 @@ void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, in
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
 	{	
 		AttractorShape& S = init_shapes[ShapeIdx];
-		S.attractor->LoopAdaptative( S.line_points );
+		S.attractor->LoopAdaptative(S.line_points, iter);
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
@@ -509,8 +512,8 @@ void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_loca
 		for( int32 j = 0; j < num_local_points; ++j )
 		{
 			tri_indices.push_back( Cap1 );
+			tri_indices.push_back(Cap1 + 1 + (j + 1) % num_local_points);
 			tri_indices.push_back( Cap1 + 1 + j );
-			tri_indices.push_back( Cap1 + 1 + (j+1)%num_local_points );
 			//tri_indices.push_back( (nShape-1) * 2*num_local_points + (2*j+2) % (2*num_local_points) );
 			//tri_indices.push_back( (nShape-1) * 2*num_local_points + (2*j+1) );
 		}
@@ -690,6 +693,7 @@ void SAUtils::MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>
 	vMergePoints = line_points;
 	vMergeFollow = VX_follow_array;
 
+#if 0
 	// Manage start
 	if( params.merge_start >= 1 )
 	{
@@ -771,7 +775,7 @@ void SAUtils::MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>
 			vMergeFollow[StartIdx + Offset] = normalize( vMergeFollow[StartIdx + Offset] );
 		}
 	}
-
+#endif // 0
 }
 
 StrangeAttractor* SAUtils::CreateAttractorType(String const& attractor_name)

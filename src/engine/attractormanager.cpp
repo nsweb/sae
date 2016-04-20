@@ -83,7 +83,8 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
     {
         CoAttractor* attractor = m_attractors[att_idx];
         CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-        mat4 world_mat( copos->GetTransform().ToMat4() );
+
+		mat4 world_mat( copos->GetTransform().ToMat4() );
         m_mesh_shader->SetUniform( uni_world, world_mat );
         
         glBindVertexArray( attractor->m_varrays[CoAttractor::eVAMesh] );
