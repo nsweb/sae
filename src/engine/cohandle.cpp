@@ -7,7 +7,8 @@
 
 CLASS_EQUIP_CPP(CoHandle);
 
-CoHandle::CoHandle()
+CoHandle::CoHandle() :
+    m_current_handle_idx(INDEX_NONE)
 {
 
 }
@@ -75,4 +76,25 @@ bool CoHandle::HasHandleArrayChanged()
 void CoHandle::SaveHandleArray()
 {
 	m_cached_handles = m_handles;
+}
+
+void CoHandle::InsertHandle(int32 at_idx)
+{
+    int32 num_handle = m_handles.size();
+    if (at_idx <= 0 || at_idx > num_handle - 1 )
+        return;
+    
+    MeshHandle handle;
+    handle.m_init_idx = (m_handles[at_idx - 1].m_init_idx + m_handles[at_idx].m_init_idx) / 2;
+    handle.m_real_idx = handle.m_init_idx;
+    m_handles.insert(handle, at_idx);
+}
+
+void CoHandle::DeleteHandle(int32 at_idx)
+{
+    int32 num_handle = m_handles.size();
+    if (at_idx <= 0 || at_idx >= num_handle - 1 )
+        return;
+    
+    m_handles.erase(at_idx);
 }

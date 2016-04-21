@@ -20,8 +20,7 @@
 SAEEditor* SAEEditor::ms_peditor = nullptr;
 
 SAEEditor::SAEEditor() :
-    m_current_attractor_type(INDEX_NONE),
-	m_current_handle_idx(INDEX_NONE)
+    m_current_attractor_type(INDEX_NONE)
 {
     ms_peditor = this;
 }
@@ -345,32 +344,32 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		}
 
 		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
-		if (ImGui::ListBox("", &m_current_handle_idx, GetItemStringArray, &str_handle_array, str_handle_array.size(), 6))
-		{
-			if (m_current_handle_idx >= 0 && m_current_handle_idx < str_handle_array.size())
-			{
-				//SAEWorld::GetStaticInstance()->SetCurrentLevel(m_current_lvl_idx);
-				//level = SAEWorld::GetStaticInstance()->GetCurrentLevel();
-				//pcopath = level ? static_cast<CoPath*>(level->GetEntityComponent(CoPath::StaticClass())) : nullptr;
-				//pcoship->SetCurrentLevel(level->GetEntity());
-			}
-		}
+        ImGui::ListBox("", &cohandle->m_current_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine();
 		ImGui::BeginGroup();
-		if (ImGui::Button("Insert before"))
-		{
-
-		}
-		if (ImGui::Button("Insert after"))
-		{
-
-		}
-		if (ImGui::Button("Delete"))
-		{
-
-		}
+        
+        if (cohandle->m_current_handle_idx >= 0 && cohandle->m_current_handle_idx < num_handles)
+        {
+            bool first = (cohandle->m_current_handle_idx == 0);
+            bool last = (cohandle->m_current_handle_idx == num_handles - 1);
+            if ( (!first && ImGui::Button("Insert before", ImVec2(0,20))) ||
+                 (first && ImGui::InvisibleButton("", ImVec2(1,20))))
+            {
+                cohandle->InsertHandle( cohandle->m_current_handle_idx );
+            }
+            if ( (!last && ImGui::Button("Insert after", ImVec2(0,20))) ||
+                 (last && ImGui::InvisibleButton("", ImVec2(1,20))))
+            {
+                cohandle->InsertHandle( cohandle->m_current_handle_idx + 1 );
+            }
+            if (!first &&!last)
+            if (ImGui::Button("Delete"))
+            {
+                cohandle->DeleteHandle( cohandle->m_current_handle_idx );
+            }
+        }
 		ImGui::EndGroup();
 
 		//static float value = 0.5f;
@@ -380,11 +379,6 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		//	if (ImGui::Selectable("Set to PI")) value = 3.1415f;
 		//	ImGui::EndPopup();
 		//}
-
-		if (m_current_handle_idx >= 0 && m_current_handle_idx < num_handles)
-		{
-
-		}
 
 
         int mouse_x, mouse_y;

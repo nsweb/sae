@@ -60,8 +60,11 @@ public:
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
 	bool				HasHandleArrayChanged();
 	void				SaveHandleArray();
+    void                InsertHandle(int32 at_idx);
+    void                DeleteHandle(int32 at_idx);
 
 public:
+    int32               m_current_handle_idx;
 	Array<MeshHandle>	m_handles;
 	Array<MeshHandle>	m_cached_handles;
 

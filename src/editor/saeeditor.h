@@ -28,7 +28,7 @@ public:
 	void				UIDrawEditorMenus(bigball::RenderContext& render_ctxt);
     
     int                 m_current_attractor_type;
-	int                 m_current_handle_idx;
+	//int                 m_current_handle_idx;
     
 private:
     static SAEEditor*    ms_peditor;
