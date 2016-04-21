@@ -64,9 +64,9 @@ public:
 
 	// Attractor params
 	AttractorLineParams		m_line_params;
-	AttractorLineParams		m_prev_line_params;
+	AttractorLineParams		m_cached_line_params;
     AttractorShapeParams    m_shape_params;
-	AttractorShapeParams    m_prev_shape_params;
+	AttractorShapeParams    m_cached_shape_params;
 
 	enum eVAType
 	{

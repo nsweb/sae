@@ -63,7 +63,7 @@ public:
 
 public:
 	Array<MeshHandle>	m_handles;
-	Array<MeshHandle>	m_prev_handles;
+	Array<MeshHandle>	m_cached_handles;
 
 };
 

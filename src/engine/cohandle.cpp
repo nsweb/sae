@@ -59,13 +59,13 @@ void CoHandle::_Render(RenderContext& render_ctxt)
 
 bool CoHandle::HasHandleArrayChanged()
 {
-	if (m_handles.size() != m_prev_handles.size())
+	if (m_handles.size() != m_cached_handles.size())
 		return true;
 
 	int32 num_handle = m_handles.size();
 	for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 	{
-		if (!(m_handles[h_idx] == m_prev_handles[h_idx]))
+		if (!(m_handles[h_idx] == m_cached_handles[h_idx]))
 			return true;
 	}
 
@@ -74,5 +74,5 @@ bool CoHandle::HasHandleArrayChanged()
 
 void CoHandle::SaveHandleArray()
 {
-	m_prev_handles = m_handles;
+	m_cached_handles = m_handles;
 }

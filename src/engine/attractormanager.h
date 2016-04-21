@@ -36,8 +36,11 @@ public:
     virtual void		RemoveComponentFromWorld( Component* pComponent ) override;
 	virtual void		Tick( struct TickContext& tick_ctxt ) override;
 	virtual void		_Render( struct RenderContext& render_ctxt ) override;
-    void				DrawAttractors( struct RenderContext& render_ctxt );
+    
     Array<CoAttractor*> const& GetAttractors()  { return m_attractors;  }
+
+	void				SetShowHandles(bool show);
+	bool				GetShowHandles()		{ return m_show_handles; }
 
 protected:
 
@@ -46,6 +49,10 @@ protected:
     Shader*             m_bg_shader;
     Shader*             m_line_shader;
     Shader*             m_mesh_shader;
+	bool				m_show_handles;
+
+	void				DrawAttractors(struct RenderContext& render_ctxt);
+	void				DrawHandles(struct RenderContext& render_ctxt);
 };
 
 

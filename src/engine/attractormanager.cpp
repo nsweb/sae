@@ -3,19 +3,25 @@
 #include "../sae.h"
 #include "attractormanager.h"
 #include "coattractor.h"
+#include "cohandle.h"
 #include "engine/controller.h"
 #include "engine/camera.h"
 #include "engine/coposition.h"
 #include "gfx/gfxmanager.h"
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
+#include "gfx/drawutils.h"
 #include "system/profiler.h"
 
 
 
 STATIC_MANAGER_CPP(AttractorManager);
 
-AttractorManager::AttractorManager()
+AttractorManager::AttractorManager() :
+	m_bg_shader(nullptr),
+	m_line_shader(nullptr),
+	m_mesh_shader(nullptr),
+	m_show_handles(false)
 {
 	m_pStaticInstance = this;
 }
@@ -63,6 +69,9 @@ void AttractorManager::_Render( RenderContext& render_ctxt )
 	PROFILE_SCOPE( __FUNCTION__ );
 
     DrawAttractors(render_ctxt);
+
+	if (m_show_handles)
+		DrawHandles(render_ctxt);
 }
 
 void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
@@ -103,3 +112,32 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
     m_mesh_shader->Unbind();
 }
 
+void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
+{
+	for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+	{
+		CoAttractor* attractor = m_attractors[att_idx];
+		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+
+		const int num_points = attractor->m_line_points.size();
+		const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+
+		int32 num_handle = cohandle->m_handles.size();
+		for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
+		{
+			MeshHandle const& handle = cohandle->m_handles[h_idx];
+			
+			if (handle.m_real_idx >= 0 && handle.m_real_idx < num_points)
+			{
+				vec3 world_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_real_idx]);
+				DrawUtils::GetStaticInstance()->PushAABB(world_handle_pos, cube_size, u8vec4(255, 0, 255, 255));
+			}
+		}
+	}
+}
+
+void AttractorManager::SetShowHandles(bool show)
+{
+	m_show_handles = show;
+}

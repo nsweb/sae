@@ -87,7 +87,7 @@ void SAEEngine::DeclareComponentsAndEntities()
 	Super::DeclareComponentsAndEntities();
 
 	DECLARE_COMPONENT_MGR( CoAttractor, AttractorManager );
-	DECLARE_COMPONENT( CoHandle );
+	DECLARE_COMPONENT(CoHandle);
 
 	DECLARE_ENTITYPATTERN( Attractor, Entity, (3, "CoPosition", "CoAttractor", "CoHandle"), (0) );
 }

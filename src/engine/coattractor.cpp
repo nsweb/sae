@@ -61,7 +61,7 @@ void CoAttractor::Destroy()
 
 void CoAttractor::AddToWorld()
 {
-	RebuildAttractorMesh();
+	RebuildAttractorMesh(true);
     
 	Super::AddToWorld();
 }
@@ -74,7 +74,7 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
     BB_DELETE(m_attractor);
     
     m_attractor = SAUtils::CreateAttractorType(type);
-    RebuildAttractorMesh();
+    RebuildAttractorMesh(true);
 }
 
 void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
@@ -88,7 +88,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	if (!m_attractor || !cohandle)
         return;
 	
-	if (force_rebuild || !(m_line_params == m_prev_line_params))
+	if (force_rebuild || !(m_line_params == m_cached_line_params))
 	{
 		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
 	}
@@ -98,9 +98,11 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 		cohandle->m_handles.push_back(MeshHandle());
 
 	cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
+	cohandle->m_handles[0].m_real_idx = 1;
 	cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
+	cohandle->m_handles.Last().m_real_idx = m_line_points.size() - 2;
 
-	if (force_rebuild || !(m_shape_params == m_prev_shape_params) || cohandle->HasHandleArrayChanged())
+	if (force_rebuild || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{
 		m_shape_params.weld_vertex = false;
 		SAUtils::GenerateSolidMesh(m_line_points, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
@@ -130,8 +132,8 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	UpdateVertexBuffers();
 
 	// save current params
-	m_prev_line_params = m_line_params;
-	m_prev_shape_params = m_shape_params;
+	m_cached_line_params = m_line_params;
+	m_cached_shape_params = m_shape_params;
 	cohandle->SaveHandleArray();
 }
 

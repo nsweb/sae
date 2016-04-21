@@ -253,6 +253,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		return;
 
 	CoAttractor* attractor = attractors[0];
+	CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
     
     bool show_pane = false;
     SDL_DisplayMode display_mode = g_pEngine->GetDisplayMode();
@@ -329,9 +330,11 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         ImGui::InputFloat3("Dimensions", (float*)&dimensions, 2, ImGuiInputTextFlags_ReadOnly);
 	}
     
-    if (ImGui::CollapsingHeader("Modifications"))
+	bool show_modifications = ImGui::CollapsingHeader("Modifications");
+	AttractorManager::GetStaticInstance()->SetShowHandles(show_modifications);
+
+	if (show_modifications)
     {
-		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 		int32 num_handles = cohandle->m_handles.size();
 
 		ImGui::PushItemWidth(50);
@@ -341,7 +344,8 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 			str_handle_array.push_back(String::Printf("%d", h_idx));
 		}
 
-		if (ImGui::ListBox("Handles", &m_current_handle_idx, GetItemStringArray, &str_handle_array, str_handle_array.size(), 6))
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
+		if (ImGui::ListBox("", &m_current_handle_idx, GetItemStringArray, &str_handle_array, str_handle_array.size(), 6))
 		{
 			if (m_current_handle_idx >= 0 && m_current_handle_idx < str_handle_array.size())
 			{
@@ -353,11 +357,34 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		}
 		ImGui::PopItemWidth();
 
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		if (ImGui::Button("Insert before"))
+		{
+
+		}
+		if (ImGui::Button("Insert after"))
+		{
+
+		}
+		if (ImGui::Button("Delete"))
+		{
+
+		}
+		ImGui::EndGroup();
+
+		//static float value = 0.5f;
+		//if (ImGui::BeginPopupContextItem("item context menu"))
+		//{
+		//	if (ImGui::Selectable("Set to zero")) value = 0.0f;
+		//	if (ImGui::Selectable("Set to PI")) value = 3.1415f;
+		//	ImGui::EndPopup();
+		//}
+
 		if (m_current_handle_idx >= 0 && m_current_handle_idx < num_handles)
 		{
 
 		}
-
 
 
         int mouse_x, mouse_y;
