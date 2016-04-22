@@ -107,16 +107,16 @@ void DFManager::_Render( RenderContext& render_ctxt )
 	static float global_time = 0.f;
 	global_time += render_ctxt.m_delta_seconds;
     
-    vec3 cam_pos = render_ctxt.m_view.m_Transform.GetTranslation();
-    mat4 view_inv_mat( render_ctxt.m_view.m_Transform.GetRotation(), render_ctxt.m_view.m_Transform.GetTranslation(), (float)render_ctxt.m_view.m_Transform.GetScale() );
+	vec3 cam_pos = render_ctxt.m_view.m_transform.GetTranslation();
+	mat4 view_inv_mat(render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale());
 	
-	const float fov_y = render_ctxt.m_view.m_fParameters[eCP_FOV] * (F_PI / 180.0f);
-	const float z_near = render_ctxt.m_view.m_fParameters[eCP_NEAR];
-	const float z_far = render_ctxt.m_view.m_fParameters[eCP_FAR];
+	const float fov_y = render_ctxt.m_view.m_parameters[eCP_FOV] * (F_PI / 180.0f);
+	const float z_near = render_ctxt.m_view.m_parameters[eCP_NEAR];
+	const float z_far = render_ctxt.m_view.m_parameters[eCP_FAR];
 
 	vec2 screen_res;
 	screen_res.y = bigball::tan( fov_y * 0.5f );
-	screen_res.x = screen_res.y * render_ctxt.m_view.m_fParameters[eCP_ASPECT];
+	screen_res.x = screen_res.y * render_ctxt.m_view.m_parameters[eCP_ASPECT];
 
 	vec2 z_var;	
 	z_var.x = (z_far + z_near) / (z_far - z_near);

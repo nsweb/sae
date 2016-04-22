@@ -10,6 +10,7 @@
 namespace bigball
 {
     struct BIGBALL_API RenderContext;
+	struct ControllerMouseState;
 };
 
 class SAEEditor
@@ -26,6 +27,7 @@ public:
     
     void                UIDrawEditor( bool* bshow_editor, bigball::RenderContext& render_ctxt );
 	void				UIDrawEditorMenus(bigball::RenderContext& render_ctxt);
+	void				HandleScenePick(ControllerMouseState const& mouse_state);
     
     int                 m_current_attractor_type;
 	//int                 m_current_handle_idx;

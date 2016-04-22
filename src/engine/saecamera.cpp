@@ -1,6 +1,7 @@
 
 #include "../sae.h"
 #include "saecamera.h"
+#include "../editor/saeeditor.h"
 #include "engine/coposition.h"
 #include "engine/controller.h"
 
@@ -11,14 +12,11 @@ CLASS_EQUIP_CPP(SAECameraCtrl_Editor);
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 SAECameraCtrl_Editor::SAECameraCtrl_Editor() :
-		//m_strafe_speed(0.1f),
-		//m_rotation_speed(0.1f),
 		m_ptarget(nullptr),
-		m_current_cp_edit(0),
 		m_edit_slide(0.f)
 {
-    m_StrafeSpeed = 1.f;
-    m_RotationSpeed = 50.f;
+    m_strafe_speed = 1.f;
+    m_rotation_speed = 50.f;
 }
 
 
@@ -30,8 +28,8 @@ void SAECameraCtrl_Editor::UpdateView( CameraView& cam_view, float delta_seconds
 bool SAECameraCtrl_Editor::OnControllerInput( Camera* pcamera, ControllerInput const& input )
 {
     CameraView& cam_view = pcamera->GetView();
-    quat cam_rot = cam_view.m_Transform.GetRotation();
-    vec3 cam_pos = cam_view.m_Transform.GetTranslation();
+    quat cam_rot = cam_view.m_transform.GetRotation();
+    vec3 cam_pos = cam_view.m_transform.GetTranslation();
     mat3 cam_to_world( cam_rot );
     vec3 right = cam_to_world.v0.xyz;
     vec3 up = cam_to_world.v1.xyz;
@@ -53,14 +51,14 @@ bool SAECameraCtrl_Editor::OnControllerInput( Camera* pcamera, ControllerInput c
     
     if( input.m_type == eCIT_Key )
     {
-        cam_pos += (right * input.m_delta.x + up * input.m_delta.z + front * input.m_delta.y) * m_StrafeSpeed;
+		cam_pos += (right * input.m_delta.x + up * input.m_delta.z + front * input.m_delta.y) * m_strafe_speed;
     }
 	else if (input.m_type == eCIT_KeyCtrl || input.m_type == eCIT_KeyAlt)
     {
         vec3 target_pos = cam_pos + front * target_dist;
 
-        quat Yaw( quat::fromeuler_xyz( 0.f, 0.f, input.m_delta.x * m_RotationSpeed ) );
-        quat Pitch( quat::fromeuler_xyz( input.m_delta.y * m_RotationSpeed, 0.f, 0.f ) );
+		quat Yaw(quat::fromeuler_xyz(0.f, 0.f, input.m_delta.x * m_rotation_speed));
+		quat Pitch(quat::fromeuler_xyz(input.m_delta.y * m_rotation_speed, 0.f, 0.f));
         cam_rot = Yaw * cam_rot * Pitch;
         
         mat3 new_cam_to_world( cam_rot );
@@ -68,13 +66,17 @@ bool SAECameraCtrl_Editor::OnControllerInput( Camera* pcamera, ControllerInput c
         cam_pos = target_pos - front * target_dist;
     }
     
-    cam_view.m_Transform.SetRotation( cam_rot );
-    cam_view.m_Transform.SetTranslation( cam_pos );
+    cam_view.m_transform.SetRotation( cam_rot );
+    cam_view.m_transform.SetTranslation( cam_pos );
     
 	//return Super::OnControllerInput( pcamera, input );
     return true;
 }
 
+void SAECameraCtrl_Editor::TickMouseState(ControllerMouseState const& mouse_state)
+{
+	SAEEditor::Get()->HandleScenePick(mouse_state);
+}
 
 void SAECameraCtrl_Editor::BuildGui()
 {

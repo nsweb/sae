@@ -76,7 +76,7 @@ void AttractorManager::_Render( RenderContext& render_ctxt )
 
 void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 {
-    transform cam2world_transform( render_ctxt.m_view.m_Transform.GetRotation(), render_ctxt.m_view.m_Transform.GetTranslation(), (float)render_ctxt.m_view.m_Transform.GetScale() );
+	transform cam2world_transform(render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale());
     mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
     mat4 view_mat = bigball::inverse(view_inv_mat);
     

@@ -380,41 +380,54 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		//	ImGui::EndPopup();
 		//}
 
-
-        int mouse_x, mouse_y;
-        SDL_GetMouseState( &mouse_x, &mouse_y );
-        float screen_width = (float) g_pEngine->GetDisplayMode().w;
-        float screen_height = (float) g_pEngine->GetDisplayMode().h;
-        float s_x = (2.0f * mouse_x) / screen_width - 1.0f;
-        float s_y = 1.0f - (2.0f * mouse_y) / screen_height;
-        vec4 ray_clip = vec4( s_x, s_y, -1.f, 1.f );
-        vec4 ray_eye_h = inverse( render_ctxt.m_proj_mat ) * ray_clip;
-        vec3 ray_eye = vec3(ray_eye_h.xy, -1.0);
-        vec3 ray_world = normalize( render_ctxt.m_view.m_Transform.TransformVector(ray_eye) );
-
-        vec3 cam_pos = render_ctxt.m_view.m_Transform.GetTranslation();
-        /*quat cam_rot = render_ctxt.m_view.m_Transform.GetRotation();
-        mat3 cam_to_world( cam_rot );
-        vec3 cam_front = -cam_to_world.v2.xyz;*/
-        
-        const float max_ray_dist = 10.f;
-        vec3 ray_end = cam_pos + ray_world/*cam_front*/ * max_ray_dist;
-        
-        RayCastParams params;
-        params.m_start  = cam_pos;
-        params.m_end    = ray_end;
-        params.m_capsule_width = attractor->m_shape_params.fatness_scale;
-        
-        RayCastResults results;
-        if( attractor->RayCast(params, results) )
-        {
-            CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-			const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
-            DrawUtils::GetStaticInstance()->PushAABB(results.m_hit, cube_size, u8vec4(255,0,255,255));
-        }
     }
 
     ImGui::End();
+}
+
+void SAEEditor::HandleScenePick(ControllerMouseState const& mouse_state)
+{
+	Array<CoAttractor*> const& attractors = AttractorManager::GetStaticInstance()->GetAttractors();
+	bool allow_picking = AttractorManager::GetStaticInstance()->GetShowHandles();
+	if (!allow_picking || !attractors.size())
+	{
+		return;
+	}
+
+	CoAttractor* attractor = attractors[0];
+
+	float screen_width = (float)g_pEngine->GetDisplayMode().w;
+	float screen_height = (float)g_pEngine->GetDisplayMode().h;
+	float s_x = (2.0f * mouse_state.m_mouse_x) / screen_width - 1.0f;
+	float s_y = 1.0f - (2.0f * mouse_state.m_mouse_y) / screen_height;
+	mat4 proj_mat = Controller::GetStaticInstance()->GetRenderProjMatrix();
+	CameraView const& view = Controller::GetStaticInstance()->GetRenderView();
+
+	vec4 ray_clip = vec4(s_x, s_y, -1.f, 1.f);
+	vec4 ray_eye_h = inverse(proj_mat) * ray_clip;
+	vec3 ray_eye = vec3(ray_eye_h.xy, -1.0);
+	vec3 ray_world = normalize(view.m_transform.TransformVector(ray_eye));
+
+	vec3 cam_pos = view.m_transform.GetTranslation();
+	/*quat cam_rot = render_ctxt.m_view.m_Transform.GetRotation();
+	mat3 cam_to_world( cam_rot );
+	vec3 cam_front = -cam_to_world.v2.xyz;*/
+
+	const float max_ray_dist = 10.f;
+	vec3 ray_end = cam_pos + ray_world/*cam_front*/ * max_ray_dist;
+
+	RayCastParams params;
+	params.m_start = cam_pos;
+	params.m_end = ray_end;
+	params.m_capsule_width = attractor->m_shape_params.fatness_scale;
+
+	RayCastResults results;
+	if (attractor->RayCast(params, results))
+	{
+		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+		const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+		DrawUtils::GetStaticInstance()->PushAABB(results.m_hit, cube_size, u8vec4(255, 0, 255, 255));
+	}
 }
 
 bool SAEEditor::Init()
