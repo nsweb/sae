@@ -121,7 +121,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
 
 		const int num_points = attractor->m_line_points.size();
-		const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+		const float cube_size = 2.f * copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
 
 		int32 num_handle = cohandle->m_handles.size();
 		for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
@@ -131,7 +131,8 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			if (handle.m_real_idx >= 0 && handle.m_real_idx < num_points)
 			{
 				vec3 world_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_real_idx]);
-				DrawUtils::GetStaticInstance()->PushAABB(world_handle_pos, cube_size, u8vec4(255, 0, 255, 255));
+                quat world_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_real_idx];
+                DrawUtils::GetStaticInstance()->PushOBB(transform(world_handle_quat, world_handle_pos, cube_size), u8vec4(255, 0, 255, 255), 0.5f, 0.5f);
 			}
 		}
 	}

@@ -20,17 +20,22 @@ void SAUtils::ComputeStrangeAttractorGradient()
 	S0.attractor->Loop(S0.line_points, 3000);
 
 	init_shapes.resize( S0.line_points.size() / 10 );
+    
+    Array<quat> frames;
+    Array<float> follow_angles;
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
 	{	
 		AttractorShape& S = init_shapes[ShapeIdx];
 		S.attractor = &att0;
 		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
 		S.attractor->LoopGradient(S.line_points, 200);
+        
+        GenerateFrames(S.line_points, frames, follow_angles);
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
 		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, params);
+		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
 	}
 
 	// Generate tri index
@@ -61,17 +66,22 @@ void SAUtils::ComputeStrangeAttractorCurl()
 	S0.attractor->Loop(S0.line_points, 2000);
 
 	init_shapes.resize( S0.line_points.size() / 10 );
+    
+    Array<quat> frames;
+    Array<float> follow_angles;
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
 	{	
 		AttractorShape& S = init_shapes[ShapeIdx];
 		S.attractor = &att0;
 		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
 		S.attractor->LoopCurl( S.line_points, 200 );
+        
+        GenerateFrames(S.line_points, frames, follow_angles);
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
 		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, params);
+		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
 	}
 
 	// Generate tri index
@@ -162,13 +172,13 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_adaptative_dist = init_ad;
 }
 
-void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
+void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {
 	Array<vec3> local_shape;
 	GenerateLocalShape( local_shape, params );
 	const int32 num_local_points = local_shape.size();
 
-	GenerateTriVertices(tri_vertices, tri_normals, local_shape, line_points, params);
+	GenerateTriVertices(tri_vertices, tri_normals, local_shape, line_points, frames, follow_angles, params);
 	GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex);
 }
 
@@ -208,16 +218,21 @@ void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, in
 	Array<vec3> local_shape;
 	GenerateLocalShape( local_shape, params );
 	const int32 num_local_points = local_shape.size();
+    
+    Array<quat> frames;
+    Array<float> follow_angles;
 
 	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
 	{	
 		AttractorShape& S = init_shapes[ShapeIdx];
 		S.attractor->LoopAdaptative(S.line_points, iter);
+        
+        GenerateFrames(S.line_points, frames, follow_angles);
 
 		// Generate shapes
 		params.fatness_scale = S.attractor->m_fatness_scale;
 		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, params);
+		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
 	}
 
 	// Generate tri index
@@ -233,10 +248,73 @@ void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, in
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3> line_points, const AttractorShapeParams& params)
+void SAUtils::GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles )
 {
-	vec3 P_prev, P_current, P_next, VLastZ, VX_follow;
-	
+    vec3 P_prev, P_current, P_next, vz_follow;
+    vec3 vx_prev, vy_prev, vz_prev;
+    
+    // Compute normal to internal curvature
+    //Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
+    //VX_array.resize( line_points.size() );      // RIGHT  --> FRONT
+    //VY_array.resize( line_points.size() );      // FRONT  --> UP
+    //VZ_array.resize( line_points.size() );      // UP     --> RIGHT
+    //VX_follow_array.resize( line_points.size() );
+    
+    frames.resize(line_points.size());
+    follow_angles.resize(line_points.size());
+    
+    for( int32 i = 1; i < line_points.size()-1; i++ )
+    {
+        P_prev = line_points[i-1];
+        P_current = line_points[i];
+        P_next = line_points[i+1];
+        vec3 V0 = P_current - P_prev;
+        vec3 V1 = P_next - P_current;
+        float V0_len = length(V0);
+        vec3 V0N = V0 / V0_len;
+        vec3 V1N = normalize(V1);
+        vec3 vy = cross( V1N, V0N );    // up vector
+        float vy_len = length(vy);
+        if (vy_len > 1e-4)
+            vy /= vy_len;
+        else
+            vy = vy_prev;
+        
+        vec3 V0RightN = cross( V0N, vy );
+        vec3 V1RightN = cross( V1N, vy );
+        vec3 vz = normalize( V0RightN + V1RightN );
+        vec3 vx = cross( vy, vz );
+        
+        // Replace VX_follow inside VX, VZ frame
+        // Remove VY component
+        if( i == 1 )
+            vz_follow = vz;
+        
+        float dotX = dot( vx, vz_follow );
+        if( bigball::abs(dotX) > 0.99f )
+            int32 Break = 0;
+        vz_follow -= vx * dotX;
+        vz_follow = normalize( vz_follow );
+        //VX_follow_array[i] = VX_follow;
+        
+        frames[i] = mat3( vx, vy, vz );
+        
+        float dot_y = dot( vy, vz_follow );
+        float dot_z = dot( vz, vz_follow );
+        float delta_angle = bigball::atan2(dot_y, dot_z);
+        follow_angles[i] = delta_angle;
+    }
+    frames[0] = frames[1];
+    frames[line_points.size()-1] = frames[line_points.size()-2];
+    follow_angles[0] = follow_angles[1];
+    follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
+}
+
+void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params)
+{
+	vec3 P_prev, P_current, P_next, VX_follow;
+
+#if DEAD_CODE
 	// Compute normal to internal curvature
 	Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
 	VX_array.resize( line_points.size() );
@@ -290,69 +368,43 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 
 	Array<vec3> merge_line_points, merge_VX_follow;
 	MergeLinePoints( line_points, VX_follow_array, VX_array, VZ_array, merge_line_points, merge_VX_follow, params );
-
+#endif // DEAD_CODE
+    
 	const int32 num_local_points = local_shape.size();
 	const int32 line_inc = (params.simplify_level > 1 ? params.simplify_level : 1);
 	Array<vec3> rotated_shape;
 	rotated_shape.resize(num_local_points);
-	for (int32 i = 1; i<merge_line_points.size() - 1; i += line_inc)
+	for (int32 i = 1; i < line_points.size() - 1; i += line_inc)
 	{
-		vec3 VX = VX_array[i];
-		vec3 VY = VY_array[i];
-		vec3 VZ = VZ_array[i];
-		VX_follow = merge_VX_follow[i];
-		P_prev = merge_line_points[i-1];
-		P_current = merge_line_points[i];
-		P_next = merge_line_points[i+1];
+        mat3 mat( frames[i] );
+		vec3 vx = mat.v0;   // FRONT
+        vec3 vy = mat.v1;   // UP
+        vec3 vz = mat.v2;   // RIGHT
+		//VX_follow = merge_VX_follow[i];
+		P_prev = line_points[i-1];
+		P_current = line_points[i];
+		//P_next = merge_line_points[i+1];
 		vec3 V0 = P_current - P_prev;
 		//vec3 V1 = P_next - P_current;
 		float V0_len = length(V0);
 		vec3 V0N = V0 / V0_len;
-		vec3 V0RightN = cross( V0N, VZ );
+		vec3 V0RightN = cross( V0N, vy );
 
-#if 0
-			// Compute angle between current VX and VX_follow
-			float dotX = VX * VX_follow;
-			float dotZ = VZ * VX_follow;
-			float DAngle = -atan2( dotZ, dotX );
-			// Accumulate angle
-			AngularSpeed += DAngle;
-			float ClampedAngle = AngularSpeed;
-			if( ClampedAngle > MaxAngleSpeed )
-				ClampedAngle = MaxAngleSpeed;
-			else if( ClampedAngle < -MaxAngleSpeed )
-				ClampedAngle = -MaxAngleSpeed;
-
-			// Rotate VX_follow according to speed
-			cf = cos( ClampedAngle );
-			sf = sin( ClampedAngle );
-			VX_follow = VX * cf + VZ * sf;
-		
-			// Reverse angle for local shape
-			dotX = VX * VX_follow;
-			dotZ = VZ * VX_follow;
-			float FinalAngle = atan2( dotZ, dotX );
-			cf = cos( FinalAngle );
-			sf = sin( FinalAngle );
-
-			// Reduce speed
-			AngularSpeed *= SpeedDamping;
-#endif
 
 		// Twist local shape with follow vec inside current frame VX, VY, VZ
-		float dot_x = dot( VX, VX_follow );
-		float dot_z = dot( VZ, VX_follow );
-		float delta_angle = bigball::atan2(dot_z, dot_x);
+		//float dot_x = dot( VX, VX_follow );
+		//float dot_z = dot( VZ, VX_follow );
+        float delta_angle = follow_angles[i]; // bigball::atan2(dot_z, dot_x);
 		float cf = bigball::cos(delta_angle);
 		float sf = bigball::sin(delta_angle);
 
-		float cos_alpha = dot( V0RightN, VX_array[i] );
+		float cos_alpha = dot( V0RightN, vz );
 		float scale = 1.0f / cos_alpha;
 		for (int32 j = 0; j < num_local_points; ++j)
 		{ 
-			float local_x = local_shape[j].x * cf - local_shape[j].z * sf;
-			float local_z = local_shape[j].x * sf + local_shape[j].z * cf;
-			rotated_shape[j] = P_current + VX * (local_x * (scale * params.fatness_scale)) + VY * (local_shape[j].y * params.fatness_scale) + VZ * (local_z * params.fatness_scale);
+			float local_z = local_shape[j].x * cf - local_shape[j].z * sf;
+			float local_y = local_shape[j].x * sf + local_shape[j].z * cf;
+			rotated_shape[j] = P_current + vz * (local_z * (scale * params.fatness_scale)) + vx * (local_shape[j].y * params.fatness_scale) + vy * (local_y * params.fatness_scale);
 		}
 		
 		for( int32 j = 0; j < num_local_points; ++j )
@@ -385,13 +437,13 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 			}
 		}
 
-		VLastZ = VZ;
+		//VLastZ = VZ;
 	}
 
 	// For capping...
 	int32 ShapeWOCapCount = tri_vertices.size();
-	tri_vertices.push_back(merge_line_points[1]);
-	vec3 start_normal = normalize(merge_line_points[0] - merge_line_points[1]);
+	tri_vertices.push_back(line_points[1]);
+	vec3 start_normal = normalize(line_points[0] - line_points[1]);
 	if (tri_normals)
 		tri_normals->push_back(start_normal);
 	if( !params.weld_vertex )
@@ -407,8 +459,8 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		}	
 	}
 
-	tri_vertices.push_back(merge_line_points[merge_line_points.size() - 2]);
-	vec3 end_normal = normalize(merge_line_points[merge_line_points.size() - 1] - merge_line_points[merge_line_points.size() - 2]);
+	tri_vertices.push_back(line_points[line_points.size() - 2]);
+	vec3 end_normal = normalize(line_points[line_points.size() - 1] - line_points[line_points.size() - 2]);
 	if (tri_normals)
 		tri_normals->push_back(end_normal);
 	if( !params.weld_vertex )

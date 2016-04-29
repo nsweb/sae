@@ -80,6 +80,8 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
 void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 {
 	m_line_points.clear();
+    m_frames.clear();
+    m_follow_angles.clear();
 	m_tri_vertices.clear();
 	m_tri_normals.clear();
 	m_tri_indices.clear();
@@ -91,6 +93,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	if (force_rebuild || !(m_line_params == m_cached_line_params))
 	{
 		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
+        SAUtils::GenerateFrames(m_line_points, m_frames, m_follow_angles);
 	}
 
 	// enforce cohandle ends
@@ -107,7 +110,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	if (force_rebuild || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{
 		m_shape_params.weld_vertex = false;
-		SAUtils::GenerateSolidMesh(m_line_points, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+		SAUtils::GenerateSolidMesh(m_line_points, m_frames, m_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
 	}
     
     vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);

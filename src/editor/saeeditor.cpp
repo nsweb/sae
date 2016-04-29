@@ -344,30 +344,30 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		}
 
 		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
-        ImGui::ListBox("", &cohandle->m_current_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
+        ImGui::ListBox("", &cohandle->m_selected_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine();
 		ImGui::BeginGroup();
         
-        if (cohandle->m_current_handle_idx >= 0 && cohandle->m_current_handle_idx < num_handles)
+        if (cohandle->m_selected_handle_idx >= 0 && cohandle->m_selected_handle_idx < num_handles)
         {
-            bool first = (cohandle->m_current_handle_idx == 0);
-            bool last = (cohandle->m_current_handle_idx == num_handles - 1);
+            bool first = (cohandle->m_selected_handle_idx == 0);
+            bool last = (cohandle->m_selected_handle_idx == num_handles - 1);
             if ( (!first && ImGui::Button("Insert before", ImVec2(0,20))) ||
                  (first && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
-                cohandle->InsertHandle( cohandle->m_current_handle_idx );
+                cohandle->InsertHandle( cohandle->m_selected_handle_idx );
             }
             if ( (!last && ImGui::Button("Insert after", ImVec2(0,20))) ||
                  (last && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
-                cohandle->InsertHandle( cohandle->m_current_handle_idx + 1 );
+                cohandle->InsertHandle( cohandle->m_selected_handle_idx + 1 );
             }
             if (!first &&!last)
             if (ImGui::Button("Delete"))
             {
-                cohandle->DeleteHandle( cohandle->m_current_handle_idx );
+                cohandle->DeleteHandle( cohandle->m_selected_handle_idx );
             }
         }
 		ImGui::EndGroup();

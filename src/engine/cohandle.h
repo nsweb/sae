@@ -51,10 +51,10 @@ public:
 
 	static Component*	NewComponent()		{ return new CoHandle(); }
 
-	virtual void		Create( Entity* owner, class json::Object* proto = nullptr );
-	virtual void		Destroy();	
-	virtual void		AddToWorld();
-	virtual void		RemoveFromWorld();
+	virtual void		Create( Entity* owner, class json::Object* proto = nullptr ) override;
+	virtual void		Destroy() override;
+	virtual void		AddToWorld() override;
+	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
@@ -64,7 +64,7 @@ public:
     void                DeleteHandle(int32 at_idx);
 
 public:
-    int32               m_current_handle_idx;
+    int32               m_selected_handle_idx;
 	Array<MeshHandle>	m_handles;
 	Array<MeshHandle>	m_cached_handles;
 

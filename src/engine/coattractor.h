@@ -38,10 +38,10 @@ public:
 
 	static Component*	NewComponent()		{ return new CoAttractor(); }
 
-	virtual void		Create( Entity* owner, class json::Object* proto = nullptr );
-	virtual void		Destroy();	
-	virtual void		AddToWorld();
-	virtual void		RemoveFromWorld();
+	virtual void		Create( Entity* owner, class json::Object* proto = nullptr ) override;
+	virtual void		Destroy() override;
+	virtual void		AddToWorld() override;
+	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
@@ -56,6 +56,8 @@ public:
 	StrangeAttractor*       m_attractor;
     
     Array<vec3>             m_line_points;
+    Array<quat>             m_frames;
+    Array<float>            m_follow_angles;
     Array<vec3>             m_tri_vertices;
 	Array<vec3>             m_tri_normals;
     Array<int32>            m_tri_indices;

@@ -30,7 +30,7 @@ public:
 	void				HandleScenePick(ControllerMouseState const& mouse_state);
     
     int                 m_current_attractor_type;
-	//int                 m_current_handle_idx;
+	//int                 m_selected_handle_idx;
     
 private:
     static SAEEditor*    ms_peditor;

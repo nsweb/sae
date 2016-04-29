@@ -8,7 +8,7 @@
 CLASS_EQUIP_CPP(CoHandle);
 
 CoHandle::CoHandle() :
-    m_current_handle_idx(INDEX_NONE)
+    m_selected_handle_idx(INDEX_NONE)
 {
 
 }

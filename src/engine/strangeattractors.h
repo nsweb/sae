@@ -424,12 +424,13 @@ namespace SAUtils
 	void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
 	void		ComputeStrangeAttractorCurl();
 	void		ComputeStrangeAttractorGradient();
-	void		GenerateSolidMesh(const Array<vec3>& line_points, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
+	void		GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
 
+    void        GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles );
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex);
-	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3> line_points, const AttractorShapeParams& params);
+	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params);
 
 	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( const char* FileName, Array<vec3>& vPos, Array<int32>& vTriIdx );
