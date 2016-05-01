@@ -23,8 +23,8 @@ public:
 
 	bool operator == (MeshHandle const& oth)
 	{
-		return m_transform == oth.m_transform
-			&& m_type == oth.m_type && m_init_idx == oth.m_init_idx && m_real_idx == oth.m_real_idx;
+		return /*m_transform == oth.m_transform
+			&& m_type == oth.m_type &&*/ m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
 	}
 
 	enum eHandleType
@@ -35,10 +35,10 @@ public:
 		eHT_End,
 	};
 
-	transform	m_transform;
-	eHandleType	m_type;
-	int32		m_init_idx;
-	int32		m_real_idx;
+	//transform	m_transform;
+	//eHandleType	m_type;
+	int32		m_line_idx;
+	int32		m_mesh_idx;
 };
 
 class CoHandle : public Component 

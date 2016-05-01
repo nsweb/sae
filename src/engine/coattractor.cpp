@@ -101,11 +101,11 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 		cohandle->m_handles.push_back(MeshHandle());
 
 	//cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
-    cohandle->m_handles[0].m_init_idx = 1;
-	cohandle->m_handles[0].m_real_idx = 1;
+    cohandle->m_handles[0].m_line_idx = 1;
+	cohandle->m_handles[0].m_mesh_idx = 1;
 	//cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
-    cohandle->m_handles.Last().m_init_idx = m_line_points.size() - 2;
-	cohandle->m_handles.Last().m_real_idx = m_line_points.size() - 2;
+    cohandle->m_handles.Last().m_line_idx = m_line_points.size() - 2;
+	cohandle->m_handles.Last().m_mesh_idx = m_line_points.size() - 2;
 
 	if (force_rebuild || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{

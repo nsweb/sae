@@ -128,11 +128,15 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		{
 			MeshHandle const& handle = cohandle->m_handles[h_idx];
 			
-			if (handle.m_real_idx >= 0 && handle.m_real_idx < num_points)
+			if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
 			{
-				vec3 world_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_real_idx]);
-                quat world_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_real_idx];
-                DrawUtils::GetStaticInstance()->PushOBB(transform(world_handle_quat, world_handle_pos, cube_size), u8vec4(255, 0, 255, 255), 0.5f, 0.5f);
+				vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_line_idx]);
+                quat world_line_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_line_idx];
+                DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), u8vec4(255, 0, 255, 255), 0.5f, 0.5f);
+                
+                vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
+                //quat world_mesh_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_mesh_idx];
+                DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size, u8vec4(255, 0, 255, 255));
 			}
 		}
 	}

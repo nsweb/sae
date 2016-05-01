@@ -85,8 +85,8 @@ void CoHandle::InsertHandle(int32 at_idx)
         return;
     
     MeshHandle handle;
-    handle.m_init_idx = (m_handles[at_idx - 1].m_init_idx + m_handles[at_idx].m_init_idx) / 2;
-    handle.m_real_idx = handle.m_init_idx;
+    handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
+    handle.m_mesh_idx = handle.m_line_idx;
     m_handles.insert(handle, at_idx);
 }
 
