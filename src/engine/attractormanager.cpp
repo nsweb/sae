@@ -135,8 +135,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
                 DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), u8vec4(255, 0, 255, 255), 0.5f, 0.5f);
                 
                 vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
-                //quat world_mesh_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_mesh_idx];
-                DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size, u8vec4(255, 0, 255, 255));
+                DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size * 0.85, u8vec4(0, 255, 255, 255) );
 			}
 		}
 	}
