@@ -199,16 +199,16 @@ bool CoAttractor::OnControllerInput( Camera* pcamera, ControllerInput const& inp
     return true;
 }
 
-bool CoAttractor::RayCast(RayCastParams const& params, RayCastResults& results)
+bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const float ray_width, vec3& hit)
 {
     CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
     transform t = copos->GetTransform();
     
-    vec3 seg0 = t.TransformPositionInverse(params.m_start);
-    vec3 seg1 = t.TransformPositionInverse(params.m_end );
+	vec3 seg0 = t.TransformPositionInverse(ray_start);
+	vec3 seg1 = t.TransformPositionInverse(ray_end);
     
 	// brute force raycast atm
-    const float sq_width = params.m_capsule_width * params.m_capsule_width;
+	const float sq_width = ray_width * ray_width;
     
     float min_t = FLT_MAX;
     int32 min_idx = INDEX_NONE;
@@ -228,7 +228,7 @@ bool CoAttractor::RayCast(RayCastParams const& params, RayCastResults& results)
     
     if (min_idx != INDEX_NONE)
     {
-        results.m_hit = t.TransformPosition(m_line_points[min_idx]);
+		hit = t.TransformPosition(m_line_points[min_idx]);
         return true;
     }
     

@@ -62,6 +62,7 @@ public:
 	void				SaveHandleArray();
     void                InsertHandle(int32 at_idx);
     void                DeleteHandle(int32 at_idx);
+	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end);
 
 public:
     int32               m_selected_handle_idx;

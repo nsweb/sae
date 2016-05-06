@@ -16,17 +16,6 @@ namespace bigball
     struct ControllerInput;
 };
 
-struct RayCastParams
-{
-	vec3 m_start;
-	vec3 m_end;
-	float m_capsule_width;
-};
-
-struct RayCastResults
-{
-	vec3 m_hit;
-};
 
 class CoAttractor : public Component 
 {
@@ -50,7 +39,7 @@ public:
 	void				RebuildAttractorMesh(bool force_rebuild = false);
     eAttractorType      GetAttractorType()   { return m_attractor ? m_attractor->m_type : eAttractor_None; }
 
-	bool				RayCast(RayCastParams const& params, RayCastResults& results);
+	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, const float ray_width, vec3& hit);
 
 public:
 	StrangeAttractor*       m_attractor;

@@ -65,147 +65,8 @@ void SAEEditor::UIDrawEditor( bool* bshow_editor, RenderContext& render_ctxt )
     
     ImGui::Begin("Editor", bshow_editor, ImVec2(200,400), -1.f, 0/*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar*/ );
 
-#if 1
 	ImGui::ShowTestWindow();
-#else
 
-    if( ImGui::CollapsingHeader("Level") )
-    {
-        Array<String> str_level_array;
-        Array<CoLevel*> const& levels = SAEWorld::GetStaticInstance()->GetLevelArray();
-        for( int lvl_idx = 0; lvl_idx < levels.size(); lvl_idx++ )
-            str_level_array.push_back( String::Printf( "%s", levels[lvl_idx]->m_level_name.c_str() ) );
-        
-        ImGui::PushItemWidth( 50 );
-        if( ImGui::ListBox( "Levels", &m_current_lvl_idx, GetItemStringArray, &str_level_array, str_level_array.size(), 6 ) )
-        {
-            if( m_current_lvl_idx >= 0 && m_current_lvl_idx < levels.size() )
-            {
-                SAEWorld::GetStaticInstance()->SetCurrentLevel(m_current_lvl_idx);
-                level = SAEWorld::GetStaticInstance()->GetCurrentLevel();
-                pcopath = level ? static_cast<CoPath*>( level->GetEntityComponent( CoPath::StaticClass() ) ) : nullptr;
-                pcoship->SetCurrentLevel( level->GetEntity() );
-            }
-        }
-        ImGui::PopItemWidth();
-    }
-    if( ImGui::CollapsingHeader("Camera") )
-    {
-        ImGui::SliderFloat("strafe_speed", &cam_edit->m_strafe_speed, 0.f, 2.f);
-        bool left = ImGui::Button( "left" );
-        ImGui::SameLine();
-        bool right = ImGui::Button( "right" );
-        ImGui::SameLine();
-        bool front = ImGui::Button( "front" );
-        ImGui::SameLine();
-        bool back = ImGui::Button( "back" );
-        ImGui::SameLine();
-        bool up = ImGui::Button( "up" );
-        ImGui::SameLine();
-        bool down = ImGui::Button( "down" );
-        
-        uint32 modifiers = 0;
-        if( left )
-            Controller::GetStaticInstance()->OnInputX( modifiers, -render_ctxt.m_delta_seconds );
-        if( right )
-            Controller::GetStaticInstance()->OnInputX( modifiers, render_ctxt.m_delta_seconds );
-        if( front )
-            Controller::GetStaticInstance()->OnInputY( modifiers, render_ctxt.m_delta_seconds );
-        if( back )
-            Controller::GetStaticInstance()->OnInputY( modifiers, -render_ctxt.m_delta_seconds );
-        if( up )
-            Controller::GetStaticInstance()->OnInputZ( modifiers, render_ctxt.m_delta_seconds );
-        if( down )
-            Controller::GetStaticInstance()->OnInputZ( modifiers, -render_ctxt.m_delta_seconds );
-    }
-	if( ImGui::CollapsingHeader("Path") )
-	{
-        bool save_path = ImGui::Button( "save" );
-        ImGui::SameLine();
-        bool load_path = ImGui::Button( "load" );
-        if( save_path || load_path )
-        {
-            bigball::File lvl_path;
-            String str_file = String::Printf("../data/level/%s/path.fs", pcopath->m_level_name.ToString().c_str());
-            if( lvl_path.Open( str_file.c_str(), save_path ) )
-            {
-                pcopath->Serialize(lvl_path);
-            }
-        }
-        
-        if( ImGui::SliderFloat("knot_dist", &pcoship->m_path_knot_dist_level, 0.f, pcopath->m_sum_knot_distance) )
-        {
-            pcoship->m_path_knot_dist_level = bigball::clamp( pcoship->m_path_knot_dist_level, 0.f, pcopath->m_sum_knot_distance );
-            if( cam_edit )
-                m_current_cp_idx = cam_edit->ResetEdit( pcoship->m_path_knot_dist_level );
-        }
-        ImGui::InputFloat("sum_dist", &pcoship->m_path_dist_level, -1, ImGuiInputTextFlags_ReadOnly);
-        
-		ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 5.0f);
-		ImGui::BeginChild("Sub2", ImVec2(0,400), true);
-		ImGui::Text("Control points");
-
-		Array<String> str_cp_array;
-		for( int cp_idx = 0; cp_idx < pcopath->m_ctrl_points.size(); cp_idx++ )
-			str_cp_array.push_back( String::Printf( "%d", cp_idx ) );
-
-        ImGui::PushItemWidth( 50 );
-		if( ImGui::ListBox( "", &m_current_cp_idx, GetItemStringArray, &str_cp_array, str_cp_array.size(), 11 ) )
-		{
-			if( m_current_cp_idx >= 0 && m_current_cp_idx < pcopath->m_ctrl_points.size() )
-			{
-				pcoship->m_path_knot_dist_level = pcopath->GetSumKnotDistance( m_current_cp_idx );
-				if( cam_edit )
-					m_current_cp_idx = cam_edit->ResetEdit( pcoship->m_path_knot_dist_level );
-			}
-		}
-        ImGui::PopItemWidth();
-
-		ImGui::SameLine();
-        ImGui::BeginChild("Action", ImVec2(0,200), true);
-        if( m_current_cp_idx >= 0 && m_current_cp_idx < pcopath->m_ctrl_points.size() )
-        {
-            bool insert_before = ImGui::Button( "ins. before" );
-            ImGui::SameLine();
-            bool insert_after = ImGui::Button( "ins. after" );
-            if( insert_before || insert_after )
-            {
-                pcopath->InsertControlPoint( m_current_cp_idx, insert_after );
-            }
-            
-            float delta = cam_edit ? cam_edit->m_edit_slide : 0.f;
-            if( pcopath->m_ctrl_points.size() > 1 && (delta > 1e-2f || delta < -1e-2f) )
-            {
-                ImGui::SameLine();
-                if( ImGui::Button( "ins. here" ) )
-                {
-                    pcopath->InsertControlPoint( pcopath->GetSumKnotDistance( m_current_cp_idx ) + delta );
-                }
-            }
-
-            // disable if one remaining ctrl point...
-            if( pcopath->m_ctrl_points.size() > 1 )
-            {
-                ImGui::SameLine();
-                if( ImGui::Button( "del" ) )
-                {
-                    pcopath->DeleteControlPoint( m_current_cp_idx );
-                    if( cam_edit )
-                        m_current_cp_idx = cam_edit->ResetEdit( pcoship->m_path_knot_dist_level );
-                }
-            }
-            if( cam_edit)
-            {
-				cam_edit->BuildGui();
-            }
-        }
-        ImGui::EndChild();  // Action
-		ImGui::EndChild();  // Sub2
-		ImGui::PopStyleVar();
-
-	}
-    
-#endif
     ImGui::End();
 }
 
@@ -394,6 +255,14 @@ void SAEEditor::HandleScenePick(ControllerMouseState const& mouse_state)
 		return;
 	}
 
+	// if not *dragging* (!mouse_state.m_left_down)
+		// pick amongst handles 
+		//	if mouse_state.m_left_down -> select
+		//						else   -> highlight
+	// if *dragging*
+		// if handle selected
+		//		pick line on attractor
+
 	CoAttractor* attractor = attractors[0];
 
 	float screen_width = (float)g_pEngine->GetDisplayMode().w;
@@ -416,17 +285,13 @@ void SAEEditor::HandleScenePick(ControllerMouseState const& mouse_state)
 	const float max_ray_dist = 10.f;
 	vec3 ray_end = cam_pos + ray_world/*cam_front*/ * max_ray_dist;
 
-	RayCastParams params;
-	params.m_start = cam_pos;
-	params.m_end = ray_end;
-	params.m_capsule_width = attractor->m_shape_params.fatness_scale;
-
-	RayCastResults results;
-	if (attractor->RayCast(params, results))
+	const float ray_width = attractor->m_shape_params.fatness_scale;
+	vec3 hit_result;
+	if (attractor->RayCast(cam_pos, ray_end, ray_width, hit_result))
 	{
 		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
 		const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
-		DrawUtils::GetStaticInstance()->PushAABB(results.m_hit, cube_size, u8vec4(255, 0, 255, 255));
+		DrawUtils::GetStaticInstance()->PushAABB(hit_result, cube_size, u8vec4(255, 0, 255, 255));
 	}
 }
 
