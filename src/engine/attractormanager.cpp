@@ -7,6 +7,7 @@
 #include "engine/controller.h"
 #include "engine/camera.h"
 #include "engine/coposition.h"
+#include "engine/controller.h"
 #include "gfx/gfxmanager.h"
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
@@ -21,7 +22,8 @@ AttractorManager::AttractorManager() :
 	m_bg_shader(nullptr),
 	m_line_shader(nullptr),
 	m_mesh_shader(nullptr),
-	m_show_handles(false)
+	m_show_handles(false),
+    m_prev_mouse_left_down(false)
 {
 	m_pStaticInstance = this;
 }
@@ -139,6 +141,58 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			}
 		}
 	}
+}
+
+void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
+{
+    bool allow_picking = m_show_handles;
+    if (!allow_picking || !m_attractors.size())
+    {
+        return;
+    }
+    
+    // if not *dragging* (!mouse_state.m_left_down)
+    // pick amongst handles
+    //	if mouse_state.m_left_down -> select
+    //						else   -> highlight
+    // if *dragging*
+    // if handle selected
+    //		pick line on attractor
+    bool dragging = m_editor_pick.m_attractor != nullptr && mouse_state.m_left_down && m_prev_mouse_left_down;
+    
+    float screen_width = (float)g_pEngine->GetDisplayMode().w;
+    float screen_height = (float)g_pEngine->GetDisplayMode().h;
+    float s_x = (2.0f * mouse_state.m_mouse_x) / screen_width - 1.0f;
+    float s_y = 1.0f - (2.0f * mouse_state.m_mouse_y) / screen_height;
+    mat4 proj_mat = Controller::GetStaticInstance()->GetRenderProjMatrix();
+    CameraView const& view = Controller::GetStaticInstance()->GetRenderView();
+    
+    vec4 ray_clip = vec4(s_x, s_y, -1.f, 1.f);
+    vec4 ray_eye_h = inverse(proj_mat) * ray_clip;
+    vec3 ray_eye = vec3(ray_eye_h.xy, -1.0);
+    vec3 ray_world = normalize(view.m_transform.TransformVector(ray_eye));
+    
+    vec3 cam_pos = view.m_transform.GetTranslation();
+    /*quat cam_rot = render_ctxt.m_view.m_Transform.GetRotation();
+     mat3 cam_to_world( cam_rot );
+     vec3 cam_front = -cam_to_world.v2.xyz;*/
+    
+    const float max_ray_dist = 10.f;
+    vec3 ray_end = cam_pos + ray_world/*cam_front*/ * max_ray_dist;
+    
+    for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+    {
+        CoAttractor* attractor = m_attractors[0];
+    
+        const float ray_width = attractor->m_shape_params.fatness_scale;
+        vec3 hit_result;
+        if (attractor->RayCast(cam_pos, ray_end, ray_width, hit_result))
+        {
+            CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+            const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+            DrawUtils::GetStaticInstance()->PushAABB(hit_result, cube_size, u8vec4(255, 0, 255, 255));
+        }
+    }
 }
 
 void AttractorManager::SetShowHandles(bool show)

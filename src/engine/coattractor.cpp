@@ -218,7 +218,7 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
         
 		// square dist to segment
         float t;
-		float sq_dist = intersect::SquaredDistancePointSegment(point, seg0, seg1, t);
+        float sq_dist = intersect::SquaredDistancePointSegment(point, seg0, seg1, t);
         if (sq_dist < sq_width && t < min_t)
         {
             min_t = t;

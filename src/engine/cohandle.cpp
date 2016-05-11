@@ -2,8 +2,10 @@
 
 #include "../sae.h"
 #include "cohandle.h"
+#include "coattractor.h"
 #include "engine/coposition.h"
 #include "gfx/rendercontext.h"
+#include "math/intersections.h"
 
 
 CLASS_EQUIP_CPP(CoHandle);
@@ -103,25 +105,32 @@ void CoHandle::DeleteHandle(int32 at_idx)
 bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end)
 {
 #if 0
-	CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
-
+	CoPosition* pos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
+    CoAttractor* attractor = static_cast<CoAttractor*>(GetEntityComponent("CoAttractor"));
+    transform const& attr_transform = pos->GetTransform();
+    const float cube_size = 2.f * attr_transform.GetScale() * attractor->m_shape_params.fatness_scale;
+    
+    float min_dist = 0.f;
+    
 	int32 num_handle = m_handles.size();
 	for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 	{
-		m_handles[h_idx];
+		MeshHandle const& handle = m_handles[h_idx];
 
-		vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_line_idx]);
-		quat world_line_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_line_idx];
-		DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), u8vec4(255, 0, 255, 255), 0.5f, 0.5f);
-
-		vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
-		DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size * 0.85, u8vec4(0, 255, 255, 255));
+		vec3 world_line_handle_pos = attr_transform.TransformPosition(attractor->m_line_points[handle.m_line_idx]);
+		quat world_line_handle_quat = attr_transform.GetRotation() * attractor->m_frames[handle.m_line_idx];
+        transform handle_transform(world_line_handle_quat, world_line_handle_pos, cube_size);
+        
+        vec3 ray_start_box = handle_transform.TransformPositionInverse(ray_start);
+        vec3 ray_end_box = handle_transform.TransformPositionInverse(ray_end);
+        vec3 ray_dir_box = normalize(ray_end_box - ray_start_box);
+        
+        float dist = intersect::RayBoxIntersection(ray_start_box, ray_dir_box, vec3(1.f, 0.5f, 0.5f));
+        
+	
+		vec3 world_mesh_handle_pos = attr_transform.TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
+        dist = intersect::RaySphereIntersection(ray_start_box, ray_dir_box, vec3(0.f, 0.f, 0.f), cube_size * 0.85f);
 	}
-
-	Draw::InstanceParams& params = m_shape_params[shape_idx];
-	mat4 const& box_to_world = m_shape_matrices[shape_idx];
-	mat4 box_to_view = view_mat * box_to_world;
-	params.m_eye_to_box = (inverse(box_to_view) * vec4(0.f, 0.f, 0.f, 1.f)).xyz;
 #endif
 
 	return false;
