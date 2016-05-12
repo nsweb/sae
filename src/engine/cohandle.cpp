@@ -140,6 +140,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 			vec3 ray_start_sphere = h_mesh_transform.TransformPositionInverse(ray_start);
 			vec3 ray_end_sphere = h_mesh_transform.TransformPositionInverse(ray_end);
 			vec3 ray_dir_sphere = normalize(ray_end_sphere - ray_start_sphere);
+            
 			float dist = intersect::RaySphereIntersection(ray_start_sphere, ray_dir_sphere, vec3(0.f, 0.f, 0.f), 0.85f);
 			if (dist >= 0.f && dist < pick_result.m_dist)
 			{

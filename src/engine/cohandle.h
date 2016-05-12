@@ -48,8 +48,8 @@ class CoHandle : public Component
 public:
 						CoHandle();
 	virtual				~CoHandle();
-
-	static Component*	NewComponent()		{ return new CoHandle(); }
+    
+	static Component*	NewComponent()              { return new CoHandle(); }
 
 	virtual void		Create( Entity* owner, class json::Object* proto = nullptr ) override;
 	virtual void		Destroy() override;
@@ -62,6 +62,7 @@ public:
 	void				SaveHandleArray();
     void                InsertHandle(int32 at_idx);
     void                DeleteHandle(int32 at_idx);
+    MeshHandle&         GetHandle(int32 at_idx)     { return m_handles[at_idx]; }
 
 	struct PickResult
 	{

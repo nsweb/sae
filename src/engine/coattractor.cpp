@@ -210,7 +210,6 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
 	// brute force raycast atm
 	const float sq_width = ray_width * ray_width;
     
-    float min_t = FLT_MAX;
 	pick_result.m_line_idx = INDEX_NONE;
 	for (int32 i = 0; i < m_line_points.size(); i++)
 	{
@@ -219,9 +218,8 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
 		// square dist to segment
         float t;
         float sq_dist = intersect::SquaredDistancePointSegment(point, seg0, seg1, t);
-        if (sq_dist < sq_width && t < min_t)
+        if (sq_dist < sq_width)
         {
-            min_t = t;
 			pick_result.m_line_idx = i;
         }
 	}
