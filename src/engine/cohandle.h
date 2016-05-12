@@ -62,7 +62,14 @@ public:
 	void				SaveHandleArray();
     void                InsertHandle(int32 at_idx);
     void                DeleteHandle(int32 at_idx);
-	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end);
+
+	struct PickResult
+	{
+		int32	m_handle_idx;
+		bool	m_is_line_pick;
+		float	m_dist;
+	};
+	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& pick_result);
 
 public:
     int32               m_selected_handle_idx;

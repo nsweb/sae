@@ -56,7 +56,8 @@ public:
 protected:
 
     Array<CoAttractor*> m_attractors;
-    AttractorSelection  m_editor_pick;
+    AttractorSelection  m_editor_selected;
+	AttractorSelection  m_editor_hovered;
     
     Shader*             m_bg_shader;
     Shader*             m_line_shader;
