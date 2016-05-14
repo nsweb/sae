@@ -73,7 +73,7 @@ public:
 	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& pick_result);
 
 public:
-    int32               m_selected_handle_idx;
+    //int32               m_selected_handle_idx;
 	Array<MeshHandle>	m_handles;
 	Array<MeshHandle>	m_cached_handles;
 

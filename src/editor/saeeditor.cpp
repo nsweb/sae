@@ -94,12 +94,7 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 			}
 			ImGui::EndMenu();
 		}
-        //if (ImGui::BeginMenu("menu2"))
-        //{
-        //    if (ImGui::MenuItem("menu item"))
-        //        ImGui::OpenPopup("popup");
-        //    ImGui::EndMenu();
-        //}
+
 		ImGui::EndMainMenuBar();
 	}
     
@@ -204,31 +199,34 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 			str_handle_array.push_back(String::Printf("%d", h_idx));
 		}
 
+        AttractorSelection& current_selection = AttractorManager::GetStaticInstance()->GetEditorSelected();
 		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
-        ImGui::ListBox("", &cohandle->m_selected_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
+        ImGui::ListBox("", &current_selection.m_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine();
 		ImGui::BeginGroup();
         
-        if (cohandle->m_selected_handle_idx >= 0 && cohandle->m_selected_handle_idx < num_handles)
+        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
         {
-            bool first = (cohandle->m_selected_handle_idx == 0);
-            bool last = (cohandle->m_selected_handle_idx == num_handles - 1);
+            current_selection.m_attractor = attractor;
+            
+            bool first = (current_selection.m_handle_idx == 0);
+            bool last = (current_selection.m_handle_idx == num_handles - 1);
             if ( (!first && ImGui::Button("Insert before", ImVec2(0,20))) ||
                  (first && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
-                cohandle->InsertHandle( cohandle->m_selected_handle_idx );
+                cohandle->InsertHandle( current_selection.m_handle_idx );
             }
             if ( (!last && ImGui::Button("Insert after", ImVec2(0,20))) ||
                  (last && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
-                cohandle->InsertHandle( cohandle->m_selected_handle_idx + 1 );
+                cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
             }
             if (!first &&!last)
             if (ImGui::Button("Delete"))
             {
-                cohandle->DeleteHandle( cohandle->m_selected_handle_idx );
+                cohandle->DeleteHandle( current_selection.m_handle_idx );
             }
         }
 		ImGui::EndGroup();

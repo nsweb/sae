@@ -79,37 +79,48 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
 
 void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 {
-	m_line_points.clear();
-    m_frames.clear();
-    m_follow_angles.clear();
-	m_tri_vertices.clear();
-	m_tri_normals.clear();
-	m_tri_indices.clear();
- 
 	CoHandle* cohandle = static_cast<CoHandle*>(GetEntityComponent("CoHandle"));
 	if (!m_attractor || !cohandle)
         return;
 	
+    bool line_changed = false;
 	if (force_rebuild || !(m_line_params == m_cached_line_params))
 	{
-		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
+        m_line_points.clear();
+        m_frames.clear();
+        m_follow_angles.clear();
+
+        SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
         SAUtils::GenerateFrames(m_line_points, m_frames, m_follow_angles);
+        cohandle->m_handles.clear();
+        line_changed = true;
 	}
 
 	// enforce cohandle ends
 	while (cohandle->m_handles.size() < 2)
+    {
 		cohandle->m_handles.push_back(MeshHandle());
+        if( cohandle->m_handles.size() == 1 )
+        {
+            //cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
+            cohandle->m_handles[0].m_line_idx = 1;
+            cohandle->m_handles[0].m_mesh_idx = 1;
+        }
+        else
+        {
+            //cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
+            cohandle->m_handles.Last().m_line_idx = m_line_points.size() - 2;
+            cohandle->m_handles.Last().m_mesh_idx = m_line_points.size() - 2;
+        }
+    }
 
-	//cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
-    cohandle->m_handles[0].m_line_idx = 1;
-	cohandle->m_handles[0].m_mesh_idx = 1;
-	//cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
-    cohandle->m_handles.Last().m_line_idx = m_line_points.size() - 2;
-	cohandle->m_handles.Last().m_mesh_idx = m_line_points.size() - 2;
-
-	if (force_rebuild || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
+	if (force_rebuild || line_changed || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{
-		m_shape_params.weld_vertex = false;
+        m_tri_vertices.clear();
+        m_tri_normals.clear();
+        m_tri_indices.clear();
+
+        m_shape_params.weld_vertex = false;
 		SAUtils::GenerateSolidMesh(m_line_points, m_frames, m_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
 	}
     

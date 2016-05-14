@@ -18,7 +18,7 @@ struct AttractorSelection
 {
     AttractorSelection() : m_attractor(nullptr), m_handle_idx(INDEX_NONE) {}
     CoAttractor*    m_attractor;
-    int             m_handle_idx;
+    int32           m_handle_idx;
     bool            m_line_handle;
     
 };
@@ -48,10 +48,11 @@ public:
 	virtual void		_Render( struct RenderContext& render_ctxt ) override;
     void				HandleScenePick(ControllerMouseState const& mouse_state);
     
-    Array<CoAttractor*> const& GetAttractors()  { return m_attractors;  }
+    Array<CoAttractor*> const& GetAttractors()      { return m_attractors;  }
 
 	void				SetShowHandles(bool show);
-	bool				GetShowHandles()		{ return m_show_handles; }
+	bool				GetShowHandles()            { return m_show_handles; }
+    AttractorSelection& GetEditorSelected()         { return m_editor_selected;    }
 
 protected:
 
