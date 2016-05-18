@@ -172,6 +172,61 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_adaptative_dist = init_ad;
 }
 
+// Cubic Hermine Curve / SmoothStep()
+static float Interpolation_C1(float x) { return x * x * (3.0f - 2.0f * x); }
+
+// Quintic Hermite Curve
+static float Interpolation_C2(float x) { return x * x * x * (x * (x * 6.0f - 15.0f) + 10.0f); }
+
+// 7x^3-7x^4+x^7
+static  float Interpolation_C2_Fast(float x) { float x3 = x*x*x; return (7.0f + (x3 - 7.0f) * x) * x3; }
+
+
+void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles)
+{
+	const int handle_count = attr_handles.size();
+	if (handle_count < 2)
+	{
+		twist_line_points = line_points;
+		twist_frames = frames;
+		twist_follow_angles = follow_angles;
+		return;
+	}
+
+	twist_line_points.reserve(line_points.size());
+	twist_frames.reserve(frames.size());
+	twist_follow_angles.reserve(follow_angles.size());
+
+	for (int h_idx = 0; h_idx < handle_count - 1; h_idx++)
+	{
+		AttractorHandle const& h0 = attr_handles[h_idx];
+		AttractorHandle const& h1 = attr_handles[h_idx + 1];
+		vec3 v0 = line_points[h0.m_line_idx];
+		vec3 v1 = line_points[h0.m_mesh_idx];
+		vec3 start_offset = v1 - v0;
+		vec3 v2 = line_points[h1.m_line_idx];
+		vec3 v3 = line_points[h1.m_mesh_idx];
+		vec3 end_offset = v3 - v2;
+
+		int32 delta_idx = h1.m_line_idx - h0.m_line_idx;
+		for (int32 d_idx = 0; d_idx < delta_idx; d_idx++)
+		{
+			float t = (float)d_idx / (float)delta_idx;
+			float t0 = clamp(1.0f - t * 2.0f, 0.0f, 1.0f);
+			float t1 = clamp(t * 2.0f - 1.0f, 0.0f, 1.0f);
+			t0 = Interpolation_C1(t0);
+			t1 = Interpolation_C1(t1);
+
+			int32 p_idx = h0.m_line_idx + d_idx;
+			vec3 vl = line_points[p_idx];
+			vl += start_offset * t0 + end_offset * t1;
+			twist_line_points.push_back(vl);
+			twist_frames.push_back(frames[p_idx]);
+			twist_follow_angles.push_back(follow_angles[p_idx]);
+		}
+	}
+}
+
 void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {
 	Array<vec3> local_shape;

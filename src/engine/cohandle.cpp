@@ -86,7 +86,7 @@ void CoHandle::InsertHandle(int32 at_idx)
     if (at_idx <= 0 || at_idx > num_handle - 1 )
         return;
     
-    MeshHandle handle;
+	AttractorHandle handle;
     handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
     handle.m_mesh_idx = handle.m_line_idx;
     m_handles.insert(handle, at_idx);
@@ -114,7 +114,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 	int32 num_handle = m_handles.size();
 	for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 	{
-		MeshHandle const& handle = m_handles[h_idx];
+		AttractorHandle const& handle = m_handles[h_idx];
 
 		{
 			vec3 world_line_handle_pos = attr_transform.TransformPosition(attractor->m_line_points[handle.m_line_idx]);

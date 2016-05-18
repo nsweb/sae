@@ -99,7 +99,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	// enforce cohandle ends
 	while (cohandle->m_handles.size() < 2)
     {
-		cohandle->m_handles.push_back(MeshHandle());
+		cohandle->m_handles.push_back(AttractorHandle());
         if( cohandle->m_handles.size() == 1 )
         {
             //cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
@@ -116,12 +116,21 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 
 	if (force_rebuild || line_changed || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{
+		m_twist_line_points.clear();
+		m_twist_frames.clear();
+		m_twist_follow_angles.clear();
         m_tri_vertices.clear();
         m_tri_normals.clear();
         m_tri_indices.clear();
 
         m_shape_params.weld_vertex = false;
-		SAUtils::GenerateSolidMesh(m_line_points, m_frames, m_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+
+		// TODO sort handles by line_idx
+
+		// Twist line points to adapt to handles
+		SAUtils::TwistLinePoints(m_line_points, m_frames, m_follow_angles, cohandle->m_handles, m_twist_line_points, m_twist_frames, m_twist_follow_angles);
+		// Generate mesh from twisted line
+		SAUtils::GenerateSolidMesh(m_twist_line_points, m_twist_frames, m_twist_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
 	}
     
     vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);

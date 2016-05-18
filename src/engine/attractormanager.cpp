@@ -128,7 +128,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		int32 num_handle = cohandle->m_handles.size();
 		for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 		{
-			MeshHandle const& handle = cohandle->m_handles[h_idx];
+			AttractorHandle const& handle = cohandle->m_handles[h_idx];
 			
 			if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
 			{
@@ -196,7 +196,7 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
 		{
 			if (attractor == m_editor_selected.m_attractor)
 			{
-                MeshHandle& handle_selected = handle->GetHandle(m_editor_selected.m_handle_idx);
+				AttractorHandle& handle_selected = handle->GetHandle(m_editor_selected.m_handle_idx);
                 
                 CoHandle::PickResult current_result;
                 if (handle->RayCast(cam_pos, ray_end, current_result))

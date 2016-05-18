@@ -414,6 +414,32 @@ struct AttractorShapeParams
 	}
 };
 
+struct AttractorHandle
+{
+public:
+	AttractorHandle()	{}
+	~AttractorHandle()	{}
+
+	bool operator == (AttractorHandle const& oth)
+	{
+		return /*m_transform == oth.m_transform
+			   && m_type == oth.m_type &&*/ m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
+	}
+
+	enum eHandleType
+	{
+		eHT_PassThrough,
+		eHT_Interp,
+		eHT_Begin,
+		eHT_End,
+	};
+
+	//transform	m_transform;
+	//eHandleType	m_type;
+	int32		m_line_idx;
+	int32		m_mesh_idx;
+};
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -427,6 +453,7 @@ namespace SAUtils
 	void		GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
 
     void        GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles );
+	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex);

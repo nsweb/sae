@@ -14,32 +14,7 @@ namespace bigball
     class BIGBALL_API Camera;
     struct ControllerInput;
 };
-
-class MeshHandle
-{
-public:
-	MeshHandle()	{}
-	~MeshHandle()	{}
-
-	bool operator == (MeshHandle const& oth)
-	{
-		return /*m_transform == oth.m_transform
-			&& m_type == oth.m_type &&*/ m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
-	}
-
-	enum eHandleType
-	{
-		eHT_PassThrough,
-		eHT_Interp,
-		eHT_Begin,
-		eHT_End,
-	};
-
-	//transform	m_transform;
-	//eHandleType	m_type;
-	int32		m_line_idx;
-	int32		m_mesh_idx;
-};
+struct AttractorHandle;
 
 class CoHandle : public Component 
 {
@@ -62,7 +37,7 @@ public:
 	void				SaveHandleArray();
     void                InsertHandle(int32 at_idx);
     void                DeleteHandle(int32 at_idx);
-    MeshHandle&         GetHandle(int32 at_idx)     { return m_handles[at_idx]; }
+	AttractorHandle&    GetHandle(int32 at_idx)     { return m_handles[at_idx]; }
 
 	struct PickResult
 	{
@@ -74,8 +49,8 @@ public:
 
 public:
     //int32               m_selected_handle_idx;
-	Array<MeshHandle>	m_handles;
-	Array<MeshHandle>	m_cached_handles;
+	Array<AttractorHandle>	m_handles;
+	Array<AttractorHandle>	m_cached_handles;
 
 };
 
