@@ -29,6 +29,8 @@ SAEEngine::~SAEEngine()
 
 bool SAEEngine::Init(EngineInitParams const& init_params)
 {
+    randinit(__LINE__);
+    
 	bool bInit = Engine::Init(init_params);
     
     //////////////////////////////////////////////////////////////////////////

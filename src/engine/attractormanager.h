@@ -10,6 +10,7 @@ namespace bigball
 {
 	class BIGBALL_API Component;
 	class BIGBALL_API Shader;
+    class Archive;
     struct ControllerMouseState;
 };
 class CoAttractor;
@@ -53,6 +54,8 @@ public:
 	void				SetShowHandles(bool show);
 	bool				GetShowHandles()            { return m_show_handles; }
     AttractorSelection& GetEditorSelected()         { return m_editor_selected;    }
+    
+    void                SerializeAttractor(Archive& file);
 
 protected:
 

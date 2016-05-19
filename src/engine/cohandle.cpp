@@ -1,11 +1,11 @@
 
-
 #include "../sae.h"
 #include "cohandle.h"
 #include "coattractor.h"
 #include "engine/coposition.h"
 #include "gfx/rendercontext.h"
 #include "math/intersections.h"
+#include "system/file.h"
 
 
 CLASS_EQUIP_CPP(CoHandle);
@@ -151,4 +151,17 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 	}
 
 	return pick_result.m_handle_idx != INDEX_NONE;
+}
+
+void CoHandle::Serialize(Archive& file)
+{
+    int32 count = m_cached_handles.size();
+    file.SerializeRaw(count);
+    if( file.IsReading() )
+        m_cached_handles.resize(count);
+    
+    file.Serialize(m_cached_handles.Data(), count * sizeof(AttractorHandle));
+    
+    if( file.IsReading() )
+        m_handles = m_cached_handles;
 }

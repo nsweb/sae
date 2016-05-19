@@ -144,6 +144,12 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     if( ImGui::CollapsingHeader("Params") )
     {
 		ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_line_params.seed);
+        if (ImGui::Button("Random seed"))
+        {
+            attractor->m_line_params.seed.x = bigball::randfloat() * 2.f - 1.f;
+            attractor->m_line_params.seed.y = bigball::randfloat() * 2.f - 1.f;
+            attractor->m_line_params.seed.z = bigball::randfloat() * 2.f - 1.f;
+        }
 
 		ImGui::PushItemWidth(125);
 		ImGui::InputInt("Iteration steps", &attractor->m_line_params.iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
@@ -223,7 +229,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             {
                 cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
             }
-            if (!first &&!last)
+            if (num_handles > 2)//(!first &&!last)
             if (ImGui::Button("Delete"))
             {
                 cohandle->DeleteHandle( current_selection.m_handle_idx );

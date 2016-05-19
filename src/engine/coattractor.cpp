@@ -1,9 +1,7 @@
 
-
 #include "../sae.h"
 #include "coattractor.h"
 #include "cohandle.h"
-
 #include "core/json.h"
 #include "math/intersections.h"
 #include "system/file.h"
@@ -215,7 +213,6 @@ void CoAttractor::Tick( TickContext& tick_ctxt )
 
 bool CoAttractor::OnControllerInput( Camera* pcamera, ControllerInput const& input )
 {
-
     return true;
 }
 
@@ -260,3 +257,22 @@ void CoAttractor::_Render( RenderContext& render_ctxt )
 	
 }
 
+void CoAttractor::Serialize(Archive& file)
+{
+    file.SerializeRaw(m_cached_line_params);
+    file.SerializeRaw(m_cached_shape_params);
+ 
+    eAttractorType type;
+    if(file.IsReading())
+    {
+        file.SerializeRaw(type);
+        
+        BB_DELETE(m_attractor);
+        ChangeAttractorType(type);
+    }
+    else
+    {
+        type = GetAttractorType();
+        file.SerializeRaw(type);
+    }
+}

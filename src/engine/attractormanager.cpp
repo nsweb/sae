@@ -273,3 +273,12 @@ void AttractorManager::SetShowHandles(bool show)
 {
 	m_show_handles = show;
 }
+
+void AttractorManager::SerializeAttractor(Archive& file)
+{
+    if (!m_attractors.size())
+        return;
+    
+    CoAttractor* attractor = m_attractors[0];
+    attractor->GetEntity()->Serialize(file);
+}

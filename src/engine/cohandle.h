@@ -31,6 +31,8 @@ public:
 	virtual void		AddToWorld() override;
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
+    virtual void        Serialize(Archive& file) override;
+    
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
 	bool				HasHandleArrayChanged();
@@ -48,10 +50,9 @@ public:
 	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& pick_result);
 
 public:
-    //int32               m_selected_handle_idx;
 	Array<AttractorHandle>	m_handles;
 	Array<AttractorHandle>	m_cached_handles;
 
 };
 
-#endif // SAECOATTRACTOR_H
+#endif // SAECOHANDLE_H

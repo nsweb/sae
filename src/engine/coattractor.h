@@ -1,6 +1,4 @@
 
-
-
 #ifndef SAECOATTRACTOR_H
 #define SAECOATTRACTOR_H
 
@@ -32,6 +30,8 @@ public:
 	virtual void		AddToWorld() override;
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
+    virtual void        Serialize(Archive& file) override;
+    
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
     
