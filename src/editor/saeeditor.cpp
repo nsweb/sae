@@ -3,14 +3,12 @@
 
 #include "../sae.h"
 #include "saeeditor.h"
-
-//#include "engine/entity.h"
-//#include "engine/entitymanager.h"
 #include "engine/controller.h"
 #include "engine/coposition.h"
 #include "ui/uimanager.h"
 #include "gfx/rendercontext.h"
 #include "gfx/drawutils.h"
+#include "system/file.h"
 #include "../engine/attractormanager.h"
 #include "../engine/coattractor.h"
 #include "../engine/cohandle.h"
@@ -72,33 +70,77 @@ void SAEEditor::UIDrawEditor( bool* bshow_editor, RenderContext& render_ctxt )
 
 void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 {
+	eMenuCommandType menu_cmd_type = eMenuCommandType::None;
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("New attractor"))
 			{
-				//ImGui::OpenPopup("popup");
+				menu_cmd_type = eMenuCommandType::NewAttractor;
 			}
 			if (ImGui::MenuItem("Save attractor"))
 			{
-				//ImGui::OpenPopup("popup");
+				menu_cmd_type = eMenuCommandType::SaveAttractor;
 			}
 			if (ImGui::MenuItem("Load attractor"))
 			{
-				//ImGui::OpenPopup("popup");
+				menu_cmd_type = eMenuCommandType::LoadAttractor;
 			}
 			if (ImGui::MenuItem("Export Obj"))
 			{
-				//ImGui::OpenPopup("popup");
+				menu_cmd_type = eMenuCommandType::ExportObj;
 			}
 			ImGui::EndMenu();
 		}
 
 		ImGui::EndMainMenuBar();
 	}
-    
+
+	if (menu_cmd_type != eMenuCommandType::None)
+	{
+		ImGui::OpenPopup("File dialog");
+	}
+
+	if (ImGui::BeginPopupModal("File dialog"))
+	{
+		DrawFileDialog(menu_cmd_type);
+
+		if (ImGui::Button("Close"))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+
     DrawRightPanel(render_ctxt);
+}
+
+void SAEEditor::DrawFileDialog(eMenuCommandType cmd_type)
+{
+	if (m_current_file_path.Len() == 0)
+	{
+		CommandLine const& cmd_line = g_pEngine->GetCommandLine();
+
+		int slash_idx = cmd_line.cmd_exec.LastIndexOf('\\');
+		if (slash_idx == INDEX_NONE)
+			slash_idx = cmd_line.cmd_exec.LastIndexOf('/');
+		if (slash_idx != INDEX_NONE)
+			m_current_file_path = cmd_line.cmd_exec.Sub(0, slash_idx + 1);
+		else
+			m_current_file_path = cmd_line.cmd_exec;
+		m_current_file_path += "*.*";
+	}
+
+	ImGui::Text(m_current_file_path.c_str());
+
+	Array<String> str_file_array;
+	FileUtils::ListFiles(m_current_file_path.c_str(), str_file_array);
+
+	ImGui::PushItemWidth(250);
+	ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &str_file_array, str_file_array.size(), 6);
+	ImGui::PopItemWidth();
 }
 
 void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)

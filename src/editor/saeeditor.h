@@ -13,6 +13,15 @@ namespace bigball
 	struct ControllerMouseState;
 };
 
+enum class eMenuCommandType
+{
+	None = -1,
+	NewAttractor = 0,
+	SaveAttractor,
+	LoadAttractor,
+	ExportObj,
+};
+
 class SAEEditor
 {
 
@@ -30,7 +39,8 @@ public:
 	void				HandleScenePick(ControllerMouseState const& mouse_state);
     
     int                 m_current_attractor_type;
-	//int                 m_selected_handle_idx;
+	String				m_current_file_path;
+	int					m_current_file_selection;
     
 private:
     static SAEEditor*    ms_peditor;
@@ -38,6 +48,7 @@ private:
 	static bool			GetItemStringArray( void* data, int idx, const char** out_text );
     
     void                DrawRightPanel(bigball::RenderContext& render_ctxt);
+	void				DrawFileDialog(eMenuCommandType cmd_type);
 
 };
 
