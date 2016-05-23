@@ -130,7 +130,8 @@ void SAEEditor::DrawFileDialog(eMenuCommandType cmd_type)
 			m_current_file_path = cmd_line.cmd_exec.Sub(0, slash_idx + 1);
 		else
 			m_current_file_path = cmd_line.cmd_exec;
-		m_current_file_path += "*.*";
+		//m_current_file_path += "*.*";
+        FileUtils::NormalizePath(m_current_file_path);
 	}
 
 	ImGui::Text(m_current_file_path.c_str());
@@ -138,9 +139,22 @@ void SAEEditor::DrawFileDialog(eMenuCommandType cmd_type)
 	Array<String> str_file_array;
 	FileUtils::ListFiles(m_current_file_path.c_str(), str_file_array);
 
-	ImGui::PushItemWidth(250);
-	ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &str_file_array, str_file_array.size(), 6);
+	ImGui::PushItemWidth(350);
+    int old_sel = m_current_file_selection;
+	if( ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &str_file_array, str_file_array.size(), 6) )
+    {
+        if( old_sel == m_current_file_selection )
+        {
+
+        }
+    }
 	ImGui::PopItemWidth();
+    ImGui::SameLine();
+    if (ImGui::Button("up"))
+    {
+        m_current_file_path += "../";
+        FileUtils::NormalizePath(m_current_file_path);
+    }
 }
 
 void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
