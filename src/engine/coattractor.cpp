@@ -267,12 +267,16 @@ void CoAttractor::Serialize(Archive& file)
     {
         file.SerializeRaw(type);
         
-        BB_DELETE(m_attractor);
-        ChangeAttractorType(type);
+		BB_DELETE(m_attractor);
+		m_attractor = SAUtils::CreateAttractorType(type);
     }
     else
     {
         type = GetAttractorType();
         file.SerializeRaw(type);
     }
+}
+void CoAttractor::PostLoad()
+{
+	RebuildAttractorMesh(true);
 }

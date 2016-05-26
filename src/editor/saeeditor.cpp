@@ -21,6 +21,8 @@ SAEEditor::SAEEditor() :
     m_current_attractor_type(INDEX_NONE)
 {
     ms_peditor = this;
+	//m_current_file_name.resize(512);
+	//m_current_file_name = "";
 }
 
 SAEEditor::~SAEEditor()
@@ -99,18 +101,42 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 
 	if (menu_cmd_type != eMenuCommandType::None)
 	{
+		m_current_menu_cmd_type = menu_cmd_type;
 		ImGui::OpenPopup("File dialog");
 	}
 
 	if (ImGui::BeginPopupModal("File dialog"))
 	{
-		DrawFileDialog(menu_cmd_type);
+		DrawFileDialog(m_current_menu_cmd_type);
 
-		if (ImGui::Button("Close"))
+		const char* button_labels[(int)eMenuCommandType::Count] = { "", "Save attractor (.sae)", "Load attractor (.sae)", "Export obj" };
+		if (ImGui::Button(button_labels[(int)m_current_menu_cmd_type]))
 		{
+			// Execute command here
+			switch (m_current_menu_cmd_type)
+			{
+				case eMenuCommandType::SaveAttractor:
+				case eMenuCommandType::LoadAttractor:
+				{	
+					String filename = m_current_file_path + m_current_file_name;
+					File file;
+					if (file.Open(filename.c_str(), m_current_menu_cmd_type == eMenuCommandType::SaveAttractor ? true : false))
+					{
+						AttractorManager::GetStaticInstance()->SerializeAttractor(file);
+					}
+					break;
+				}
+			}
+
+			m_current_menu_cmd_type = eMenuCommandType::None;
 			ImGui::CloseCurrentPopup();
 		}
-
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel"))
+		{
+			m_current_menu_cmd_type = eMenuCommandType::None;
+			ImGui::CloseCurrentPopup();
+		}
 		ImGui::EndPopup();
 	}
 
@@ -130,31 +156,74 @@ void SAEEditor::DrawFileDialog(eMenuCommandType cmd_type)
 			m_current_file_path = cmd_line.cmd_exec.Sub(0, slash_idx + 1);
 		else
 			m_current_file_path = cmd_line.cmd_exec;
-		//m_current_file_path += "*.*";
-        FileUtils::NormalizePath(m_current_file_path);
+        
+		RefreshListFiles();
 	}
 
 	ImGui::Text(m_current_file_path.c_str());
 
-	Array<String> str_file_array;
-	FileUtils::ListFiles(m_current_file_path.c_str(), str_file_array);
-
 	ImGui::PushItemWidth(350);
     int old_sel = m_current_file_selection;
-	if( ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &str_file_array, str_file_array.size(), 6) )
+	if (ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &m_current_file_array, m_current_file_array.size(), 10))
     {
-        if( old_sel == m_current_file_selection )
-        {
-
-        }
+		if (m_current_file_selection >= 0 && m_current_file_selection < m_current_file_array.size())
+		{
+#if _WIN32 || _WIN64
+			String sep = "\\";
+#else
+			String sep = "/";
+#endif
+			if (m_current_file_array[m_current_file_selection].EndsWith(sep))
+			{
+				if (old_sel == m_current_file_selection)
+				{
+					// directory
+					m_current_file_path += m_current_file_array[m_current_file_selection];
+					RefreshListFiles();
+					m_current_file_selection = INDEX_NONE;
+				}
+			}
+			else
+			{
+				// file
+				m_current_file_name = m_current_file_array[m_current_file_selection];
+			}
+		}
     }
 	ImGui::PopItemWidth();
-    ImGui::SameLine();
-    if (ImGui::Button("up"))
-    {
-        m_current_file_path += "../";
-        FileUtils::NormalizePath(m_current_file_path);
-    }
+
+	char buffer[512];
+	strcpy(buffer, m_current_file_name.c_str());
+	if (ImGui::InputText("file", buffer, sizeof(buffer)))
+	{
+		m_current_file_name = String::Printf("%s", buffer);
+	}
+}
+
+void SAEEditor::RefreshListFiles()
+{
+	FileUtils::NormalizePath(m_current_file_path);
+
+	m_current_file_array.clear();
+
+#if _WIN32 || _WIN64
+	String file_filter = "*.*";
+	String sep = "\\";
+#else
+	String file_filter = "";
+	String sep = "/";
+#endif
+
+	FileUtils::ListFiles((m_current_file_path + file_filter).c_str(), m_current_file_array);
+
+	m_current_file_array.remove(".");
+	String tmp_str;
+	for (int file_idx = 0; file_idx < m_current_file_array.size(); file_idx++)
+	{
+		tmp_str = m_current_file_path + m_current_file_array[file_idx];
+		if (FileUtils::IsDirectory(tmp_str.c_str()))
+			m_current_file_array[file_idx] += sep;
+	}
 }
 
 void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)

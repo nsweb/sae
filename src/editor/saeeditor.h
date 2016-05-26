@@ -20,6 +20,7 @@ enum class eMenuCommandType
 	SaveAttractor,
 	LoadAttractor,
 	ExportObj,
+	Count,
 };
 
 class SAEEditor
@@ -40,7 +41,10 @@ public:
     
     int                 m_current_attractor_type;
 	String				m_current_file_path;
+	Array<String>		m_current_file_array;
+	String				m_current_file_name;
 	int					m_current_file_selection;
+	eMenuCommandType	m_current_menu_cmd_type;
     
 private:
     static SAEEditor*    ms_peditor;
@@ -49,6 +53,7 @@ private:
     
     void                DrawRightPanel(bigball::RenderContext& render_ctxt);
 	void				DrawFileDialog(eMenuCommandType cmd_type);
+	void				RefreshListFiles();
 
 };
 

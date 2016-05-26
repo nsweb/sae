@@ -31,6 +31,7 @@ public:
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
     virtual void        Serialize(Archive& file) override;
+	virtual void		PostLoad() override;
     
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );

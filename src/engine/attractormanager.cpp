@@ -13,8 +13,7 @@
 #include "gfx/rendercontext.h"
 #include "gfx/drawutils.h"
 #include "system/profiler.h"
-
-
+#include "system/file.h"
 
 STATIC_MANAGER_CPP(AttractorManager);
 
@@ -279,6 +278,10 @@ void AttractorManager::SerializeAttractor(Archive& file)
     if (!m_attractors.size())
         return;
     
-    CoAttractor* attractor = m_attractors[0];
-    attractor->GetEntity()->Serialize(file);
+	Entity* attractor = m_attractors[0]->GetEntity();
+	attractor->Serialize(file);
+	if (file.IsReading())
+	{
+		attractor->PostLoad();
+	}
 }
