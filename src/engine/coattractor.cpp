@@ -278,5 +278,8 @@ void CoAttractor::Serialize(Archive& file)
 }
 void CoAttractor::PostLoad()
 {
+    m_line_params = m_cached_line_params;
+    m_shape_params = m_cached_shape_params;
+    
 	RebuildAttractorMesh(true);
 }

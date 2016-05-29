@@ -274,6 +274,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             attractor->m_line_params.seed.x = bigball::randfloat() * 2.f - 1.f;
             attractor->m_line_params.seed.y = bigball::randfloat() * 2.f - 1.f;
             attractor->m_line_params.seed.z = bigball::randfloat() * 2.f - 1.f;
+            attractor->RebuildAttractorMesh();
         }
 
 		ImGui::PushItemWidth(125);
@@ -361,6 +362,18 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             }
         }
 		ImGui::EndGroup();
+        
+        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
+        {
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::PushItemWidth(140);
+            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
+            ImGui::InputInt("line idx", &handle.m_line_idx);
+            ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
+            ImGui::PopItemWidth();
+            ImGui::EndGroup();
+        }
 
 		//static float value = 0.5f;
 		//if (ImGui::BeginPopupContextItem("item context menu"))
