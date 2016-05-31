@@ -88,21 +88,31 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
     m_mesh_shader->SetUniform( uni_view, view_mat );
     ShaderUniform uni_proj = m_mesh_shader->GetUniformLocation("proj_mat");
     m_mesh_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
+	ShaderUniform uni_color = m_mesh_shader->GetUniformLocation("color_info");
     
     for( int att_idx = 0; att_idx < m_attractors.size(); att_idx++ )
     {
         CoAttractor* attractor = m_attractors[att_idx];
         CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+
+		float sel_idx = -1.f;
+		if (m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+		{
+			AttractorHandle const& handle = cohandle->GetHandle(m_editor_selected.m_handle_idx);
+			sel_idx = (float)handle.m_mesh_idx;
+		}
 
 		mat4 world_mat( copos->GetTransform().ToMat4() );
         m_mesh_shader->SetUniform( uni_world, world_mat );
-        
+
+		m_mesh_shader->SetUniform(uni_color, vec3(sel_idx, 2000.f, 1.0f));
         glBindVertexArray( attractor->m_varrays[CoAttractor::eVAMesh] );
         const int index_count = attractor->m_tri_indices.size();
 		glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
-
+		m_mesh_shader->SetUniform(uni_color, vec3(sel_idx, 2000.f, 0.75f));
 		glBindVertexArray( attractor->m_varrays[CoAttractor::eVALinePoints] );
 		const int line_count = attractor->m_line_points.size() - 1;
 		glDrawArrays(GL_LINE_STRIP, 0, line_count);
@@ -127,7 +137,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		int32 num_handle = cohandle->m_handles.size();
 		for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 		{
-			AttractorHandle const& handle = cohandle->m_handles[h_idx];
+			AttractorHandle const& handle = cohandle->GetHandle(h_idx);
 			
 			if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
 			{
