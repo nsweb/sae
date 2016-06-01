@@ -197,18 +197,27 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 	twist_frames.reserve(frames.size());
 	twist_follow_angles.reserve(follow_angles.size());
 
+	// Assumes line_idx are ordered
+
 	for (int h_idx = 0; h_idx < handle_count - 1; h_idx++)
 	{
 		AttractorHandle const& h0 = attr_handles[h_idx];
 		AttractorHandle const& h1 = attr_handles[h_idx + 1];
-		vec3 v0 = line_points[h0.m_line_idx];
+		int start_line_idx = h0.m_line_idx;
+		if (h0.m_line_idx < h0.m_mesh_idx && h0.m_mesh_idx < h1.m_line_idx)
+			start_line_idx = h0.m_mesh_idx;		// take the shortest path
+		vec3 v0 = line_points[start_line_idx];
 		vec3 v1 = line_points[h0.m_mesh_idx];
 		vec3 start_offset = v1 - v0;
+
+		//int end_line_idx = h1.m_line_idx;
+		//if (start_line_idx < h1.m_mesh_idx && h1.m_mesh_idx < h1.m_line_idx)
+		//	end_line_idx = h1.m_mesh_idx;		// take the shortest path
 		vec3 v2 = line_points[h1.m_line_idx];
 		vec3 v3 = line_points[h1.m_mesh_idx];
 		vec3 end_offset = v3 - v2;
 
-		int32 delta_idx = h1.m_line_idx - h0.m_line_idx;
+		int32 delta_idx = h1.m_line_idx - start_line_idx;
 		for (int32 d_idx = 0; d_idx < delta_idx; d_idx++)
 		{
 			float t = (float)d_idx / (float)delta_idx;
@@ -217,7 +226,7 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 			t0 = Interpolation_C1(t0);
 			t1 = Interpolation_C1(t1);
 
-			int32 p_idx = h0.m_line_idx + d_idx;
+			int32 p_idx = start_line_idx + d_idx;
 			vec3 vl = line_points[p_idx];
 			vl += start_offset * t0 + end_offset * t1;
 			twist_line_points.push_back(vl);
