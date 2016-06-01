@@ -126,6 +126,7 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 					}
 					break;
 				}
+                default: break;
 			}
 
 			m_current_menu_cmd_type = eMenuCommandType::None;
@@ -343,19 +344,21 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         {
             current_selection.m_attractor = attractor;
             
-            bool first = (current_selection.m_handle_idx == 0);
-            bool last = (current_selection.m_handle_idx == num_handles - 1);
-            if ( (!first && ImGui::Button("Insert before", ImVec2(0,20))) ||
-                 (first && ImGui::InvisibleButton("", ImVec2(1,20))))
+            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
+
+            bool insert_before = (current_selection.m_handle_idx != 0);
+            bool insert_after = handle.m_line_idx < attractor->m_line_points.size() - 2; // (current_selection.m_handle_idx != num_handles - 1 );
+            if ( (insert_before && ImGui::Button("Insert before", ImVec2(0,20))) ||
+                 (!insert_before && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
                 cohandle->InsertHandle( current_selection.m_handle_idx );
             }
-            if ( (!last && ImGui::Button("Insert after", ImVec2(0,20))) ||
-                 (last && ImGui::InvisibleButton("", ImVec2(1,20))))
+            if ( (insert_after && ImGui::Button("Insert after", ImVec2(0,20))) ||
+                 (!insert_after && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
                 cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
             }
-            if (num_handles > 2)//(!first &&!last)
+            if (num_handles > 2)
             if (ImGui::Button("Delete"))
             {
                 cohandle->DeleteHandle( current_selection.m_handle_idx );
@@ -371,6 +374,13 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
             ImGui::InputInt("line idx", &handle.m_line_idx);
             ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
+            
+            handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_points.size() - 2);
+            handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_points.size() - 2);
+            
+            const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
+            ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, num_handles, AttractorHandle::eHT_Count);
+            
             ImGui::PopItemWidth();
             ImGui::EndGroup();
         }

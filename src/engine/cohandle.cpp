@@ -83,13 +83,22 @@ void CoHandle::SaveHandleArray()
 void CoHandle::InsertHandle(int32 at_idx)
 {
     int32 num_handle = m_handles.size();
-    if (at_idx <= 0 || at_idx > num_handle - 1 )
+    if (at_idx <= 0 || at_idx > num_handle )
         return;
     
 	AttractorHandle handle;
-    handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
-    handle.m_mesh_idx = handle.m_line_idx;
-    m_handles.insert(handle, at_idx);
+    if (at_idx < num_handle)
+    {
+        handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
+        handle.m_mesh_idx = handle.m_line_idx;
+        m_handles.insert(handle, at_idx);
+    }
+    else
+    {
+        handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + 1);
+        handle.m_mesh_idx = handle.m_line_idx;
+        m_handles.push_back(handle);
+    }
 }
 
 void CoHandle::DeleteHandle(int32 at_idx)

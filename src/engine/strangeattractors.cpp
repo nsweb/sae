@@ -204,7 +204,7 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 		AttractorHandle const& h0 = attr_handles[h_idx];
 		AttractorHandle const& h1 = attr_handles[h_idx + 1];
 		int start_line_idx = h0.m_line_idx;
-		if (h0.m_line_idx < h0.m_mesh_idx && h0.m_mesh_idx < h1.m_line_idx)
+        if (h0.m_type == AttractorHandle::eHT_Cut && h0.m_line_idx < h0.m_mesh_idx && h0.m_mesh_idx < h1.m_line_idx)
 			start_line_idx = h0.m_mesh_idx;		// take the shortest path
 		vec3 v0 = line_points[start_line_idx];
 		vec3 v1 = line_points[h0.m_mesh_idx];

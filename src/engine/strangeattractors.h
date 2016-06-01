@@ -417,25 +417,24 @@ struct AttractorShapeParams
 struct AttractorHandle
 {
 public:
-	AttractorHandle()	{}
+    AttractorHandle() : m_type(eHT_Move)	{}
 	~AttractorHandle()	{}
 
 	bool operator == (AttractorHandle const& oth)
 	{
 		return /*m_transform == oth.m_transform
-			   && m_type == oth.m_type &&*/ m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
+			   &&*/ m_type == oth.m_type && m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
 	}
 
-	enum eHandleType
+    enum eHandleType : int32
 	{
-		eHT_PassThrough,
-		eHT_Interp,
-		eHT_Begin,
-		eHT_End,
+		eHT_Move,
+		eHT_Cut,
+        eHT_Count
 	};
 
 	//transform	m_transform;
-	//eHandleType	m_type;
+	eHandleType	m_type;
 	int32		m_line_idx;
 	int32		m_mesh_idx;
 };
