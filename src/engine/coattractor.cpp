@@ -20,7 +20,8 @@ CLASS_EQUIP_CPP(CoAttractor);
 CoAttractor::CoAttractor() :
 	m_attractor(nullptr),
     m_min_box(0.f, 0.f, 0.f),
-    m_max_box(0.f, 0.f, 0.f)
+    m_max_box(0.f, 0.f, 0.f),
+	m_view_handle_range(2000)
 {
 	Memory::MemZero(m_varrays);
 	Memory::MemZero(m_vbuffers);
@@ -75,7 +76,7 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
     RebuildAttractorMesh(true);
 }
 
-void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
+void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 {
 	CoHandle* cohandle = static_cast<CoHandle*>(GetEntityComponent("CoHandle"));
 	if (!m_attractor || !cohandle)
@@ -86,11 +87,12 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild)
 	{
         m_line_points.clear();
         m_frames.clear();
-        m_follow_angles.clear();
+		m_follow_angles.clear();
 
         SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
         SAUtils::GenerateFrames(m_line_points, m_frames, m_follow_angles);
-        cohandle->m_handles.clear();
+		if (!keep_handle)
+			cohandle->m_handles.clear();
         line_changed = true;
 	}
 
@@ -281,5 +283,5 @@ void CoAttractor::PostLoad()
     m_line_params = m_cached_line_params;
     m_shape_params = m_cached_shape_params;
     
-	RebuildAttractorMesh(true);
+	RebuildAttractorMesh(true, true);
 }

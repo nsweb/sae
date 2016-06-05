@@ -30,6 +30,6 @@ void main(void)
 	}
 	else
 	{
-		vs_fs_color = vec4(1.);
+		vs_fs_color = vec4(1., 1., 1., color_info.z);
 	}
 }

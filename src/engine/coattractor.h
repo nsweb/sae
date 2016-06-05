@@ -37,7 +37,7 @@ public:
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
     
     void                ChangeAttractorType(eAttractorType type);
-	void				RebuildAttractorMesh(bool force_rebuild = false);
+	void				RebuildAttractorMesh(bool force_rebuild = false, bool keep_handle = false);
     eAttractorType      GetAttractorType()   { return m_attractor ? m_attractor->m_type : eAttractor_None; }
 
 	struct PickResult
@@ -70,6 +70,8 @@ public:
 	AttractorLineParams		m_cached_line_params;
     AttractorShapeParams    m_shape_params;
 	AttractorShapeParams    m_cached_shape_params;
+
+	int32					m_view_handle_range;
 
 	enum eVAType
 	{

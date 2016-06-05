@@ -323,6 +323,12 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
 	if (show_modifications)
     {
+		if (ImGui::Button("Rebuild"))
+		{
+			attractor->RebuildAttractorMesh();
+		}
+		ImGui::InputInt("View range", &attractor->m_view_handle_range, 1, 100000);
+		
 		int32 num_handles = cohandle->m_handles.size();
 
 		ImGui::PushItemWidth(50);
@@ -379,7 +385,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_points.size() - 2);
             
             const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
-            ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, num_handles, AttractorHandle::eHT_Count);
+            ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, AttractorHandle::eHT_Count);
             
             ImGui::PopItemWidth();
             ImGui::EndGroup();
