@@ -439,6 +439,45 @@ public:
 	int32		m_mesh_idx;
 };
 
+struct AttractorFreeHandle
+{
+public:
+	AttractorFreeHandle() {}
+	~AttractorFreeHandle()	{}
+
+	bool operator == (AttractorHandle const& oth)
+	{
+		return m_line_idx == oth.m_line_idx;
+	}
+
+	enum eHandleType : int32
+	{
+		eHT_Move,
+		eHT_Cut,
+		eHT_Count
+	};
+
+	int32		m_line_idx;
+	
+};
+
+struct AttractorRange
+{
+	struct AABB
+	{
+		vec3 min;
+		vec3 max;
+	};
+
+	Array<vec3> line_points;
+	Array<AABB> bounds;
+	float weight;
+
+	const int points_in_bound = 20;
+
+	void ComputeBounds(float margin = 0.f);
+};
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -453,6 +492,7 @@ namespace SAUtils
 
     void        GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles );
 	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
+	void		MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex);

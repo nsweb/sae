@@ -236,6 +236,30 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 	}
 }
 
+void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist)
+{
+	//
+	Array<AttractorRange> ranges;
+	ranges.resize(1);
+	AttractorRange& range_init = ranges[0];
+	range_init.line_points = line_points;
+	range_init.weight = 1.f;
+	range_init.ComputeBounds(merge_dist);
+
+	int range_idx = 0;
+	while (range_idx < ranges.size())
+	{
+		// intersect range with all other ranges
+		AttractorRange& range_0 = ranges[range_idx];
+		for (int r_idx = 0; r_idx < ranges.size(); r_idx++)
+		{
+			AttractorRange& range_1 = ranges[r_idx];
+			
+			// find first point of intersecting range i.e. where two points < merge_dist
+		}
+	}
+}
+
 void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {
 	Array<vec3> local_shape;
@@ -943,4 +967,27 @@ void SAUtils::GetAttractorTypeList(Array<String>& attractor_names)
 	attractor_names.push_back("ChenLee");
 	attractor_names.push_back("DequanLi");
 	attractor_names.push_back("LorentzMod2");
+}
+
+void AttractorRange::ComputeBounds(float margin)
+{
+	int nb_bounds = (line_points.size() + points_in_bound - 1) / points_in_bound;
+	bounds.resize(nb_bounds);
+
+	for (int b = 0; b < nb_bounds; b++)
+	{
+		vec3 min = vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+		vec3 max = vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+		int start = b * points_in_bound;
+		int end = bigball::min(start + points_in_bound, line_points.size());
+		for (int p_idx = start; p_idx < end; p_idx++)
+		{
+			min = bigball::min(line_points[p_idx], min);
+			max = bigball::max(line_points[p_idx], max);
+		}
+
+		bounds[b].min = min + vec3(-margin);
+		bounds[b].max = max + vec3(margin);
+	}
 }
