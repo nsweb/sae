@@ -461,23 +461,16 @@ public:
 	
 };
 
-struct AttractorRange
+struct AABB
 {
-	struct AABB
-	{
-		vec3 min;
-		vec3 max;
-	};
+    vec3 min;
+    vec3 max;
+    static bool BoundsIntersect(AABB const& a, AABB const& b);
+};
 
-	Array<vec3> line_points;
-	Array<AABB> bounds;
-	float weight;
-
-	const int points_in_bound = 20;
-
-	void ComputeBounds(float margin = 0.f);
-	bool GetBoundPointIndices(int b_idx, int& start, int& end) const;
-	static bool BoundsIntersect(AABB const& a, AABB const& b);
+struct AttractorMergeInfo
+{
+    int merge_parent_idx;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -510,6 +503,10 @@ namespace SAUtils
 	StrangeAttractor*	CreateAttractorType(String const& attractor_name);
     StrangeAttractor*	CreateAttractorType(eAttractorType attractor_type);
 	void				GetAttractorTypeList(Array<String>& attractor_names);
+    
+    const int points_in_bound = 20;
+    void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
+    //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 
 #endif	// SAESTRANGEATTRACTORS_H

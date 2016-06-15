@@ -239,15 +239,20 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 
 void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist)
 {
-	//
-	Array<AttractorRange> line_ranges;
-	line_ranges.resize(1);
-	AttractorRange& range_init = line_ranges[0];
-	range_init.line_points = line_points;
-	range_init.weight = 1.f;
-	range_init.ComputeBounds(merge_dist);
+	// compute bounds
+    const int nb_points = line_points.size();
+    Array<AABB> bounds;
+    ComputeBounds(line_points, merge_dist, bounds);
+    
+	Array<AttractorMergeInfo> line_merges;
+	line_merges.resize(nb_points);
+    
+	//AttractorRange& range_init = line_ranges[0];
+	//range_init.line_points = line_points;
+	//range_init.weight = 1.f;
+	//range_init.ComputeBounds(merge_dist);
 
-	int range_idx = 0;
+	/*int range_idx = 0;
 	while (range_idx < line_ranges.size())
 	{
 		// intersect range with all other ranges
@@ -261,16 +266,17 @@ void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<Attrac
 			{
 				for (int b_1 = 0; b_1 < line_range_1.bounds.size(); b_1++)
 				{
-					if (AttractorRange::BoundsIntersect(line_range_0.bounds[b_0], line_range_1.bounds[b_1]))
+					if (AABB::BoundsIntersect(line_range_0.bounds[b_0], line_range_1.bounds[b_1]))
 					{
 
 					}
 				}
 			}
 		}
-	}
+	}*/
 }
 
+#if 0
 bool FindRange(AttractorRange const& lr_0, int b_0, AttractorRange const& lr_1, int b_1, float merge_dist, ivec2& r_0, ivec2& r_1)
 {
 	int start_p_0, end_p_0, start_p_1, end_p_1;
@@ -306,6 +312,7 @@ bool FindRange(AttractorRange const& lr_0, int b_0, AttractorRange const& lr_1, 
 	//vec3 dir _ 0
 	return true;
 }
+#endif
 
 void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {
@@ -1016,7 +1023,7 @@ void SAUtils::GetAttractorTypeList(Array<String>& attractor_names)
 	attractor_names.push_back("LorentzMod2");
 }
 
-void AttractorRange::ComputeBounds(float margin)
+void SAUtils::ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds)
 {
 	int nb_bounds = (line_points.size() + points_in_bound - 1) / points_in_bound;
 	bounds.resize(nb_bounds);
@@ -1026,8 +1033,10 @@ void AttractorRange::ComputeBounds(float margin)
 		vec3 min = vec3(FLT_MAX, FLT_MAX, FLT_MAX);
 		vec3 max = vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-		int start, end;
-		GetBoundPointIndices(b, start, end);
+		//int start, end;
+		//GetBoundPointIndices(b, start, end);
+        int start = b * SAUtils::points_in_bound;
+        int end = bigball::min(start + SAUtils::points_in_bound, line_points.size());
 
 		for (int p_idx = start; p_idx < end; p_idx++)
 		{
@@ -1040,7 +1049,7 @@ void AttractorRange::ComputeBounds(float margin)
 	}
 }
 
-bool AttractorRange::BoundsIntersect(AABB const& a, AABB const& b)
+bool AABB::BoundsIntersect(AABB const& a, AABB const& b)
 {
 	if (a.min.x < b.max.x || a.min.y < b.max.y || a.min.z < b.max.z ||
 		b.min.x < a.max.x || b.min.y < a.max.y || b.min.z < a.max.z)
@@ -1049,16 +1058,8 @@ bool AttractorRange::BoundsIntersect(AABB const& a, AABB const& b)
 	return false;
 }
 
-bool AttractorRange::GetBoundPointIndices(int b_idx, int& start, int& end) const
+/*void SAUtils::ComputeBoundRange(int b_idx, int& start, int& end)
 {
-	if (b_idx < 0 || b_idx >= bounds.size())
-	{
-		start = INDEX_NONE;
-		end = INDEX_NONE;
-		return false;
-	}
-
 	start = b_idx * points_in_bound;
 	end = bigball::min(start + points_in_bound, line_points.size());
-	return true;
-}
+}*/
