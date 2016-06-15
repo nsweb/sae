@@ -2,6 +2,7 @@
 #include "../sae.h"
 #include "strangeattractors.h"
 #include "system/file.h"
+#include "math/intersections.h"
 
 
 void SAUtils::ComputeStrangeAttractorGradient()
@@ -239,25 +240,71 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist)
 {
 	//
-	Array<AttractorRange> ranges;
-	ranges.resize(1);
-	AttractorRange& range_init = ranges[0];
+	Array<AttractorRange> line_ranges;
+	line_ranges.resize(1);
+	AttractorRange& range_init = line_ranges[0];
 	range_init.line_points = line_points;
 	range_init.weight = 1.f;
 	range_init.ComputeBounds(merge_dist);
 
 	int range_idx = 0;
-	while (range_idx < ranges.size())
+	while (range_idx < line_ranges.size())
 	{
 		// intersect range with all other ranges
-		AttractorRange& range_0 = ranges[range_idx];
-		for (int r_idx = 0; r_idx < ranges.size(); r_idx++)
+		AttractorRange& line_range_0 = line_ranges[range_idx];
+		for (int r_idx = 0; r_idx < line_ranges.size(); r_idx++)
 		{
-			AttractorRange& range_1 = ranges[r_idx];
+			AttractorRange& line_range_1 = line_ranges[r_idx];
 			
 			// find first point of intersecting range i.e. where two points < merge_dist
+			for (int b_0 = 0; b_0 < line_range_0.bounds.size(); b_0++)
+			{
+				for (int b_1 = 0; b_1 < line_range_1.bounds.size(); b_1++)
+				{
+					if (AttractorRange::BoundsIntersect(line_range_0.bounds[b_0], line_range_1.bounds[b_1]))
+					{
+
+					}
+				}
+			}
 		}
 	}
+}
+
+bool FindRange(AttractorRange const& lr_0, int b_0, AttractorRange const& lr_1, int b_1, float merge_dist, ivec2& r_0, ivec2& r_1)
+{
+	int start_p_0, end_p_0, start_p_1, end_p_1;
+	lr_0.GetBoundPointIndices(b_0, start_p_0, end_p_0);
+	lr_1.GetBoundPointIndices(b_1, start_p_1, end_p_1);
+
+	// Find where two lines are closest
+	const float sq_merge_dist = merge_dist * merge_dist;
+	float last_sq_dist = FLT_MAX;
+	int min_seg_0 = INDEX_NONE, min_seg_1 = INDEX_NONE;
+	bool found = false;
+	for (int p_0 = start_p_0; p_0 < end_p_0 && !found; p_0++)
+	{
+		for (int seg_1 = start_p_1; seg_1 < end_p_1 - 1 && !found; seg_1++)
+		{
+			float t;
+			float sq_dist = intersect::SquaredDistancePointSegment(lr_0.line_points[p_0], lr_1.line_points[seg_1], lr_1.line_points[seg_1 + 1], t);
+			if (sq_dist < sq_merge_dist && last_sq_dist < sq_merge_dist)
+			{
+				min_seg_0 = p_0 - 1;
+				min_seg_1 = seg_1;
+				found = true;
+			}
+			last_sq_dist = sq_dist;
+		}
+	}
+
+	if (!found)
+		return false;
+
+	// Find out if lines are reversed or not
+	int inc = 1;
+	//vec3 dir _ 0
+	return true;
 }
 
 void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
@@ -979,8 +1026,9 @@ void AttractorRange::ComputeBounds(float margin)
 		vec3 min = vec3(FLT_MAX, FLT_MAX, FLT_MAX);
 		vec3 max = vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-		int start = b * points_in_bound;
-		int end = bigball::min(start + points_in_bound, line_points.size());
+		int start, end;
+		GetBoundPointIndices(b, start, end);
+
 		for (int p_idx = start; p_idx < end; p_idx++)
 		{
 			min = bigball::min(line_points[p_idx], min);
@@ -990,4 +1038,27 @@ void AttractorRange::ComputeBounds(float margin)
 		bounds[b].min = min + vec3(-margin);
 		bounds[b].max = max + vec3(margin);
 	}
+}
+
+bool AttractorRange::BoundsIntersect(AABB const& a, AABB const& b)
+{
+	if (a.min.x < b.max.x || a.min.y < b.max.y || a.min.z < b.max.z ||
+		b.min.x < a.max.x || b.min.y < a.max.y || b.min.z < a.max.z)
+		return true;
+
+	return false;
+}
+
+bool AttractorRange::GetBoundPointIndices(int b_idx, int& start, int& end) const
+{
+	if (b_idx < 0 || b_idx >= bounds.size())
+	{
+		start = INDEX_NONE;
+		end = INDEX_NONE;
+		return false;
+	}
+
+	start = b_idx * points_in_bound;
+	end = bigball::min(start + points_in_bound, line_points.size());
+	return true;
 }

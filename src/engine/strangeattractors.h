@@ -476,6 +476,8 @@ struct AttractorRange
 	const int points_in_bound = 20;
 
 	void ComputeBounds(float margin = 0.f);
+	bool GetBoundPointIndices(int b_idx, int& start, int& end) const;
+	static bool BoundsIntersect(AABB const& a, AABB const& b);
 };
 
 //////////////////////////////////////////////////////////////////////////
