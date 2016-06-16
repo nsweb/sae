@@ -310,6 +310,65 @@ bool SAUtils::FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_i
 	r_1.y = min_seg_1 + 1;
 
 	// extend lines on both sides so as to get the full chain
+    const int nb_points = line_points.size();
+    
+    // right (r_0.y)
+    {
+    int cur_seg_0 = min_seg_0;
+    int& c_1 = inc > 0 ? r_1.y : r_1.x;
+    for( int c_1_next = c_1 + inc; c_1_next < nb_points && c_1_next >= 0; c_1_next += inc)
+    {
+        float t;
+        float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+        if(sq_dist < sq_merge_dist)
+        {
+            // move on to next point
+            c_1 = c_1_next;
+            continue;
+        }
+        
+        if( t == 0.f )
+        {
+            break;
+        }
+        else if( t == 1.f )
+        {
+            // need to move on to next segment
+            if( cur_seg_0 < nb_points - 1 )
+                cur_seg_0++;
+        }
+    }
+    r_0.y = cur_seg_0 + 1;
+    }
+    
+    // left (r_0.x)
+    {
+    int cur_seg_0 = min_seg_0;
+    int& c_1 = inc > 0 ? r_1.x : r_1.y;
+    for( int c_1_next = c_1 - inc; c_1_next < nb_points && c_1_next >= 0; c_1_next -= inc)
+    {
+        float t;
+        float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+        if(sq_dist < sq_merge_dist)
+        {
+            // move on to next point
+            c_1 = c_1_next;
+            continue;
+        }
+        
+        if( t == 0.f )
+        {
+            // need to move on to next segment
+            if( cur_seg_0 > 0 )
+                cur_seg_0--;
+        }
+        else if( t == 1.f )
+        {
+            break;
+        }
+    }
+    r_0.x = cur_seg_0;
+    }
 
 	return true;
 }
