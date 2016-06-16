@@ -243,61 +243,54 @@ void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<Attrac
     const int nb_points = line_points.size();
     Array<AABB> bounds;
     ComputeBounds(line_points, merge_dist, bounds);
-    
+	int nb_bounds = bounds.size();
+
 	Array<AttractorMergeInfo> line_merges;
 	line_merges.resize(nb_points);
-    
-	//AttractorRange& range_init = line_ranges[0];
-	//range_init.line_points = line_points;
-	//range_init.weight = 1.f;
-	//range_init.ComputeBounds(merge_dist);
 
-	/*int range_idx = 0;
-	while (range_idx < line_ranges.size())
+	for (int b_idx0 = 0; b_idx0 < nb_bounds; b_idx0++)
 	{
-		// intersect range with all other ranges
-		AttractorRange& line_range_0 = line_ranges[range_idx];
-		for (int r_idx = 0; r_idx < line_ranges.size(); r_idx++)
-		{
-			AttractorRange& line_range_1 = line_ranges[r_idx];
-			
-			// find first point of intersecting range i.e. where two points < merge_dist
-			for (int b_0 = 0; b_0 < line_range_0.bounds.size(); b_0++)
-			{
-				for (int b_1 = 0; b_1 < line_range_1.bounds.size(); b_1++)
-				{
-					if (AABB::BoundsIntersect(line_range_0.bounds[b_0], line_range_1.bounds[b_1]))
-					{
+		AABB const& b0 = bounds[b_idx0];
 
-					}
+		// compare with all previous bounds, since we want only to merge with previous lines
+		for (int b_idx1 = 0; b_idx1 < b_idx0 - 1; b_idx1++)
+		{
+			if (AABB::BoundsIntersect(b0, bounds[b_idx1]))
+			{
+				// potential merge, check whether at least one segment in b1 is near one in b0
+				if (FindMergeRange(line_points, b_idx0, b_idx1, merge_dist, ))
+				{
+
 				}
 			}
 		}
-	}*/
+	}
+
 }
 
-#if 0
-bool FindRange(AttractorRange const& lr_0, int b_0, AttractorRange const& lr_1, int b_1, float merge_dist, ivec2& r_0, ivec2& r_1)
+bool SAUtils::FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1)
 {
-	int start_p_0, end_p_0, start_p_1, end_p_1;
-	lr_0.GetBoundPointIndices(b_0, start_p_0, end_p_0);
-	lr_1.GetBoundPointIndices(b_1, start_p_1, end_p_1);
+	int start_0 = b_idx0 * SAUtils::points_in_bound - 1;
+	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
 
-	// Find where two lines are closest
+	int start_1 = b_idx1 * SAUtils::points_in_bound;
+	int end_1 = bigball::min(start_1 + SAUtils::points_in_bound, line_points.size());
+
+	// find one segment in b1 that is closest to b0 chain than merge_dist
 	const float sq_merge_dist = merge_dist * merge_dist;
 	float last_sq_dist = FLT_MAX;
 	int min_seg_0 = INDEX_NONE, min_seg_1 = INDEX_NONE;
 	bool found = false;
-	for (int p_0 = start_p_0; p_0 < end_p_0 && !found; p_0++)
+	for (int p_1 = start_1; p_1 < end_1 && !found; p_1++)
 	{
-		for (int seg_1 = start_p_1; seg_1 < end_p_1 - 1 && !found; seg_1++)
+		for (int seg_0 = start_0; seg_0 < end_0 - 1 && !found; seg_0++)
 		{
 			float t;
-			float sq_dist = intersect::SquaredDistancePointSegment(lr_0.line_points[p_0], lr_1.line_points[seg_1], lr_1.line_points[seg_1 + 1], t);
+			float sq_dist = intersect::SquaredDistancePointSegment(line_points[p_1], line_points[seg_0], line_points[seg_0 + 1], t);
 			if (sq_dist < sq_merge_dist && last_sq_dist < sq_merge_dist)
 			{
-				min_seg_0 = p_0 - 1;
-				min_seg_1 = seg_1;
+				min_seg_0 = seg_0;
+				min_seg_1 = p_1 - 1;
 				found = true;
 			}
 			last_sq_dist = sq_dist;
@@ -307,12 +300,19 @@ bool FindRange(AttractorRange const& lr_0, int b_0, AttractorRange const& lr_1, 
 	if (!found)
 		return false;
 
-	// Find out if lines are reversed or not
-	int inc = 1;
-	//vec3 dir _ 0
+	// find out if lines are reversed or not
+	vec3 dir_0 = line_points[min_seg_0 + 1] - line_points[min_seg_0];
+	vec3 dir_1 = line_points[min_seg_1 + 1] - line_points[min_seg_1];
+	int inc = bigball::dot(dir_0, dir_1) > 0.f ? 1 : -1;
+	r_0.x = min_seg_0;
+	r_0.y = min_seg_0 + 1;
+	r_1.x = min_seg_1;
+	r_1.y = min_seg_1 + 1;
+
+	// extend lines on both sides so as to get the full chain
+
 	return true;
 }
-#endif
 
 void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {

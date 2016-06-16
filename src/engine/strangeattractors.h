@@ -506,6 +506,7 @@ namespace SAUtils
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
+	bool FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1);
     //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 
