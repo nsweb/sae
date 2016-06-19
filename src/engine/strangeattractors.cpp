@@ -240,6 +240,7 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist)
 {
 	// compute bounds
+	Array<int> snap_segments;
     const int nb_points = line_points.size();
     Array<AABB> bounds;
     ComputeBounds(line_points, merge_dist, bounds);
@@ -253,51 +254,66 @@ void SAUtils::MergeLinePoints(const Array<vec3>& line_points, const Array<Attrac
 		AABB const& b0 = bounds[b_idx0];
 
 		// compare with all previous bounds, since we want only to merge with previous lines
-		for (int b_idx1 = 0; b_idx1 < b_idx0 - 1; b_idx1++)
+		for (int b_idx1 = b_idx0 - 2; b_idx1 >= 0; b_idx1--)
 		{
 			if (AABB::BoundsIntersect(b0, bounds[b_idx1]))
 			{
 				// potential merge, check whether at least one segment in b1 is near one in b0
-				if (FindMergeRange(line_points, b_idx0, b_idx1, merge_dist, ))
+				ivec2 r_0, r_1;
+				if (FindMergeRange(line_points, b_idx0, b_idx1, merge_dist, r_0, r_1, snap_segments))
 				{
+					// ok, merge r_1 points to r_0
 
+					break;
 				}
 			}
 		}
 	}
-
 }
 
-bool SAUtils::FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1)
+bool SAUtils::FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments)
 {
+	snap_segments.clear();
+
 	int start_0 = b_idx0 * SAUtils::points_in_bound - 1;
 	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
 
 	int start_1 = b_idx1 * SAUtils::points_in_bound;
-	int end_1 = bigball::min(start_1 + SAUtils::points_in_bound, line_points.size());
+	int end_1 = bigball::min((b_idx1 + 1) * SAUtils::points_in_bound, line_points.size());
 
 	// find one segment in b1 that is closest to b0 chain than merge_dist
 	const float sq_merge_dist = merge_dist * merge_dist;
-	float last_sq_dist = FLT_MAX;
-	int min_seg_0 = INDEX_NONE, min_seg_1 = INDEX_NONE;
-	bool found = false;
-	for (int p_1 = start_1; p_1 < end_1 && !found; p_1++)
+	float t, sq_dist, min_sq_dist;
+	int min_seg_0 = INDEX_NONE, min_seg_1 = INDEX_NONE, prev_seg_0 = INDEX_NONE;
+	for (int p_1 = start_1; p_1 < end_1; p_1++)
 	{
-		for (int seg_0 = start_0; seg_0 < end_0 - 1 && !found; seg_0++)
+		min_sq_dist = FLT_MAX;
+		for (int seg_0 = start_0; seg_0 < end_0 - 1; seg_0++)
 		{
-			float t;
-			float sq_dist = intersect::SquaredDistancePointSegment(line_points[p_1], line_points[seg_0], line_points[seg_0 + 1], t);
-			if (sq_dist < sq_merge_dist && last_sq_dist < sq_merge_dist)
+			sq_dist = intersect::SquaredDistancePointSegment(line_points[p_1], line_points[seg_0], line_points[seg_0 + 1], t);
+			if (sq_dist < sq_merge_dist)
 			{
+				min_sq_dist = sq_dist;
 				min_seg_0 = seg_0;
-				min_seg_1 = p_1 - 1;
-				found = true;
+				break;
 			}
-			last_sq_dist = sq_dist;
 		}
+		if (min_sq_dist < sq_merge_dist)
+		{
+			if (prev_seg_0 != INDEX_NONE)
+			{
+				// found two successive points < merge_dist
+				min_seg_1 = p_1 - 1;
+				break;
+			}
+			else
+				prev_seg_0 = min_seg_0;
+		}
+		else
+			prev_seg_0 = INDEX_NONE;
 	}
 
-	if (!found)
+	if (min_seg_1 == INDEX_NONE)
 		return false;
 
 	// find out if lines are reversed or not
@@ -308,66 +324,68 @@ bool SAUtils::FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_i
 	r_0.y = min_seg_0 + 1;
 	r_1.x = min_seg_1;
 	r_1.y = min_seg_1 + 1;
+	snap_segments.push_back(prev_seg_0);
+	snap_segments.push_back(min_seg_0);
 
 	// extend lines on both sides so as to get the full chain
     const int nb_points = line_points.size();
     
-    // right (r_0.y)
+    // right (r_1.y)
     {
-    int cur_seg_0 = min_seg_0;
-    int& c_1 = inc > 0 ? r_1.y : r_1.x;
-    for( int c_1_next = c_1 + inc; c_1_next < nb_points && c_1_next >= 0; c_1_next += inc)
-    {
-        float t;
-        float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
-        if(sq_dist < sq_merge_dist)
-        {
-            // move on to next point
-            c_1 = c_1_next;
-            continue;
-        }
+		int cur_seg_0 = min_seg_0;
+		int& c_1 = r_1.y;
+		for( int c_1_next = c_1; c_1_next < nb_points; c_1_next++)
+		{
+			float t;
+			float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+			if(sq_dist < sq_merge_dist)
+			{
+				// move on to next point
+				c_1 = c_1_next;
+				continue;
+			}
         
-        if( t == 0.f )
-        {
-            break;
-        }
-        else if( t == 1.f )
-        {
-            // need to move on to next segment
-            if( cur_seg_0 < nb_points - 1 )
-                cur_seg_0++;
-        }
-    }
-    r_0.y = cur_seg_0 + 1;
+			if( t == 0.f )
+			{
+				break;
+			}
+			else if( t == 1.f )
+			{
+				// need to move on to next segment
+				if( cur_seg_0 < nb_points - 1 )
+					cur_seg_0++;
+			}
+		}
+		r_0.y = cur_seg_0 + 1;
     }
     
-    // left (r_0.x)
+    // left (r_1.x)
     {
-    int cur_seg_0 = min_seg_0;
-    int& c_1 = inc > 0 ? r_1.x : r_1.y;
-    for( int c_1_next = c_1 - inc; c_1_next < nb_points && c_1_next >= 0; c_1_next -= inc)
-    {
-        float t;
-        float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
-        if(sq_dist < sq_merge_dist)
-        {
-            // move on to next point
-            c_1 = c_1_next;
-            continue;
-        }
+		int cur_seg_0 = min_seg_0;
+		int& c_1 = r_1.x;
+		for( int c_1_next = c_1 - inc; c_1_next < nb_points && c_1_next >= 0; c_1_next -= inc)
+		{
+			float t;
+			float sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+			if(sq_dist < sq_merge_dist)
+			{
+				// move on to next point
+				c_1 = c_1_next;
+				continue;
+			}
         
-        if( t == 0.f )
-        {
-            // need to move on to next segment
-            if( cur_seg_0 > 0 )
-                cur_seg_0--;
-        }
-        else if( t == 1.f )
-        {
-            break;
-        }
-    }
-    r_0.x = cur_seg_0;
+			if( t == 0.f )
+			{
+				// need to move on to next segment
+				if( cur_seg_0 > 0 )
+					cur_seg_0--;
+			}
+			else if( t == 1.f )
+			{
+				break;
+			}
+		}
+		r_0.x = cur_seg_0;
     }
 
 	return true;
