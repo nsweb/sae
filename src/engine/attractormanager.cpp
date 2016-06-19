@@ -129,7 +129,7 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 		{
 			CoAttractor* attractor = m_attractors[att_idx];
 			CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-			CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+			//CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 
 			float alpha = 1.f;
 			if (m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)

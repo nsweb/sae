@@ -1128,11 +1128,11 @@ void SAUtils::ComputeBounds(const Array<vec3>& line_points, float margin, Array<
 
 bool AABB::BoundsIntersect(AABB const& a, AABB const& b)
 {
-	if (a.min.x < b.max.x || a.min.y < b.max.y || a.min.z < b.max.z ||
-		b.min.x < a.max.x || b.min.y < a.max.y || b.min.z < a.max.z)
-		return true;
+	if (a.max.x < b.min.x || a.max.y < b.min.y || a.max.z < b.min.z ||
+		b.max.x < a.min.x || b.max.y < a.min.y || b.max.z < a.min.z)
+		return false;
 
-	return false;
+	return true;
 }
 
 /*void SAUtils::ComputeBoundRange(int b_idx, int& start, int& end)
