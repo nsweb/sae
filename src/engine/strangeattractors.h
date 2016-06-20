@@ -487,7 +487,7 @@ namespace SAUtils
 
     void        GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles );
 	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
-	void		MergeLinePoints(const Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist);
+	void		MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex);
@@ -506,7 +506,8 @@ namespace SAUtils
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
-	bool FindMergeRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments);
+	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments);
+	void SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments);
     //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 
