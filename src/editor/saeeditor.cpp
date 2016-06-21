@@ -284,6 +284,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
+        ImGui::InputFloat("Merge dist", &attractor->m_line_params.merge_dist);
 
 		ImGui::Separator();
         

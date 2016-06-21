@@ -357,7 +357,8 @@ struct AttractorLineParams
 	int32 rev_iter;
 	int32 warmup_iter;
 	float step_factor;
-	float target_dim; 
+	float target_dim;
+    float merge_dist;
 
 	// shape shearing
 	float shearing_angle;
@@ -371,6 +372,7 @@ struct AttractorLineParams
 		warmup_iter(200),
 		step_factor(4.f),
 		target_dim(0.f),
+        merge_dist(0.f),
 		shearing_angle(0.f),
 		shearing_scale_x(1.f),
 		shearing_scale_y(1.f)
@@ -379,7 +381,7 @@ struct AttractorLineParams
 	bool operator == (AttractorLineParams& oth)
 	{
 		return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && warmup_iter == oth.warmup_iter && step_factor == oth.step_factor 
-			&& target_dim == oth.target_dim && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
+			&& target_dim == oth.target_dim && merge_dist == oth.merge_dist && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
 	}
 };
 
@@ -470,6 +472,8 @@ struct AABB
 
 struct AttractorMergeInfo
 {
+    AttractorMergeInfo() : merge_parent_idx(INDEX_NONE) {}
+    
     int merge_parent_idx;
 };
 
@@ -506,8 +510,8 @@ namespace SAUtils
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
-	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments);
-	void SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments);
+	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges);
+	void SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges);
     //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 

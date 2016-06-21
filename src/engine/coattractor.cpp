@@ -128,8 +128,8 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 		// TODO sort handles by line_idx
 
 		// Twist line points to adapt to handles
-        static float merge_dist = 2.0f;
-        SAUtils::MergeLinePoints(m_line_points, cohandle->m_handles, merge_dist);
+        if( m_line_params.merge_dist > 0.f )
+            SAUtils::MergeLinePoints(m_line_points, cohandle->m_handles, m_line_params.merge_dist);
 		//SAUtils::TwistLinePoints(m_line_points, m_frames, m_follow_angles, cohandle->m_handles, m_twist_line_points, m_twist_frames, m_twist_follow_angles);
 		// Generate mesh from twisted line
 		//SAUtils::GenerateSolidMesh(m_twist_line_points, m_twist_frames, m_twist_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);

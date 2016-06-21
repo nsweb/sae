@@ -249,9 +249,11 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
 	Array<AttractorMergeInfo> line_merges;
 	line_merges.resize(nb_points);
 
-	for (int b_idx1 = 0; b_idx1 < nb_bounds; b_idx1++)
+    int b_idx1 = 0;
+	while ( b_idx1 < nb_bounds )
 	{
 		AABB const& b1 = bounds[b_idx1];
+        int next_idx = b_idx1 + 1;
 
 		// compare with all previous bounds, since we want only to merge with previous lines
 		for (int b_idx0 = b_idx1 - 2; b_idx0 >= 0; b_idx0--)
@@ -261,22 +263,26 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
 			{
 				// potential merge, check whether at least one segment in b1 is near one in b0
 				ivec2 r_0, r_1;
-				if (FindSnapRange(line_points, b_idx0, b_idx1, merge_dist, r_0, r_1, snap_segments))
+				if (FindSnapRange(line_points, b_idx0, b_idx1, merge_dist, r_0, r_1, snap_segments, line_merges))
 				{
 					// ok, merge r_1 points to r_0
-					SnapRange(line_points, merge_dist, r_0, r_1, snap_segments);
+					SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
+                    
+                    next_idx = 1 + r_1.y / SAUtils::points_in_bound;
 					break;
 				}
 			}
 		}
+        
+        b_idx1 = next_idx;
 	}
 }
 
-bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments)
+bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges)
 {
 	snap_segments.clear();
 
-	int start_0 = b_idx0 * SAUtils::points_in_bound - 1;
+	int start_0 = bigball::max( 0, b_idx0 * SAUtils::points_in_bound - 1 );
 	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
 
 	int start_1 = b_idx1 * SAUtils::points_in_bound;
@@ -327,6 +333,9 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 	r_1.y = min_seg_1 + 1;
 	//snap_segments.push_back(prev_seg_0);
 	//snap_segments.push_back(min_seg_0);
+    
+    if( inc < 0 )
+        int Break = 0;
 
 	// extend lines on both sides so as to get the full chain
     const int nb_points = line_points.size();
@@ -338,6 +347,12 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 		int c_1_next = c_1;
 		while (c_1_next >= 0)
 		{
+            if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
+            {
+                // reaching an already merged section, abort snapping
+                return false;
+            }
+            
 			float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
 			if (sq_dist < sq_merge_dist)
 			{
@@ -406,7 +421,7 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 	return true;
 }
 
-void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments)
+void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges)
 {
 	BB_ASSERT_LOG(r_1.y - r_1.x + 1 == snap_segments.size(), ("SnapRange error"));
 	const float sq_merge_dist = merge_dist * merge_dist;
@@ -422,6 +437,7 @@ void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, i
 		{
 			// overwrite point
 			line_points[c_1] = seg_0 * (1.f - t) + seg_1 * t;
+            line_merges[c_1].merge_parent_idx = snap_segments[s];
 		}
 		else
 			int Oups = 0;
