@@ -256,7 +256,7 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
         int next_idx = b_idx1 + 1;
 
 		// compare with all previous bounds, since we want only to merge with previous lines
-		for (int b_idx0 = b_idx1 - 2; b_idx0 >= 0; b_idx0--)
+		for (int b_idx0 = 0; b_idx0 < b_idx1 - 1; b_idx0++)
 		{
 			AABB const& b0 = bounds[b_idx0];
 			if (AABB::BoundsIntersect(b0, b1))
@@ -276,6 +276,9 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
         
         b_idx1 = next_idx;
 	}
+
+	// propagate move smoothly to points before and after
+	static int smooth_dist = SAUtils::points_in_bound;
 }
 
 bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges)
@@ -327,8 +330,8 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 	vec3 dir_0 = line_points[min_seg_0 + 1] - line_points[min_seg_0];
 	vec3 dir_1 = line_points[min_seg_1 + 1] - line_points[min_seg_1];
 	int inc = bigball::dot(dir_0, dir_1) > 0.f ? 1 : -1;
-	r_0.x = min_seg_0;
-	r_0.y = min_seg_0 + 1;
+	r_0.x = prev_seg_0;
+	r_0.y = min_seg_0;
 	r_1.x = min_seg_1;
 	r_1.y = min_seg_1 + 1;
 	//snap_segments.push_back(prev_seg_0);
@@ -342,7 +345,7 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 
 	// left (r_1.x)
 	{
-		int cur_seg_0 = min_seg_0;
+		int cur_seg_0 = r_0.x;
 		int& c_1 = r_1.x;
 		int c_1_next = c_1;
 		while (c_1_next >= 0)
@@ -367,12 +370,16 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 				// need to move on to next segment
 				if (cur_seg_0 > 0)
 					cur_seg_0--;
+				else
+					break;
 			}
 			else if (t == 1.f && inc < 0)
 			{
 				// need to move on to next segment
 				if (cur_seg_0 < nb_points - 1)
 					cur_seg_0++;
+				else
+					break;
 			}
 			else
 			{
@@ -384,7 +391,7 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
     
     // right (r_1.y)
     {
-		int cur_seg_0 = min_seg_0;
+		int cur_seg_0 = r_0.y;
 		int& c_1 = r_1.y;
 		int c_1_next = c_1;
 		while(c_1_next < nb_points)
@@ -403,12 +410,16 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 				// need to move on to next segment
 				if (cur_seg_0 < nb_points - 1)
 					cur_seg_0++;
+				else
+					break;
 			}
 			else if (t == 0.f && inc < 0)
 			{
 				// need to move on to next segment
 				if (cur_seg_0 > 0)
 					cur_seg_0--;
+				else
+					break;
 			}
 			else
 			{
@@ -438,6 +449,7 @@ void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, i
 			// overwrite point
 			line_points[c_1] = seg_0 * (1.f - t) + seg_1 * t;
             line_merges[c_1].merge_parent_idx = snap_segments[s];
+			line_merges[c_1].weight = 1.f;
 		}
 		else
 			int Oups = 0;
