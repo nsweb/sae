@@ -5,94 +5,94 @@
 #include "math/intersections.h"
 
 
-void SAUtils::ComputeStrangeAttractorGradient()
-{
-	AttractorShape S0;
-	Array<AttractorShape> init_shapes;
-
-	AizawaAttractor att0;
-	S0.attractor = &att0;
-
-	AttractorShapeParams params;
-	Array<vec3> local_shape;
-	GenerateLocalShape( local_shape, params );
-	const int32 num_local_points = local_shape.size();
-
-	S0.attractor->Loop(S0.line_points, 3000);
-
-	init_shapes.resize( S0.line_points.size() / 10 );
-    
-    Array<quat> frames;
-    Array<float> follow_angles;
-	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-	{	
-		AttractorShape& S = init_shapes[ShapeIdx];
-		S.attractor = &att0;
-		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-		S.attractor->LoopGradient(S.line_points, 200);
-        
-        GenerateFrames(S.line_points, frames, follow_angles);
-
-		// Generate shapes
-		params.fatness_scale = S.attractor->m_fatness_scale;
-		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-	}
-
-	// Generate tri index
-	GenerateTriIndices( init_shapes, num_local_points );
-
-	std::string filename = "StrangeAttractor_";
-	filename += att0.GetClassName();
-	filename += "_gradient.obj";
-	WriteObjFile( filename.c_str(), init_shapes );
-}
-
-void SAUtils::ComputeStrangeAttractorCurl()
-{
-	AttractorShape S0;
-	Array<AttractorShape> init_shapes;
-
-	//AizawaAttractor att0;
-	//att0.m_init_point = vec3( 0.1f, 0, 0 );
-
-	LorenzAttractor att0;
-	S0.attractor = &att0;
-
-	AttractorShapeParams params;
-	Array<vec3> local_shape;
-	GenerateLocalShape( local_shape, params );
-	const int32 num_local_points = local_shape.size();
-
-	S0.attractor->Loop(S0.line_points, 2000);
-
-	init_shapes.resize( S0.line_points.size() / 10 );
-    
-    Array<quat> frames;
-    Array<float> follow_angles;
-	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-	{	
-		AttractorShape& S = init_shapes[ShapeIdx];
-		S.attractor = &att0;
-		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-		S.attractor->LoopCurl( S.line_points, 200 );
-        
-        GenerateFrames(S.line_points, frames, follow_angles);
-
-		// Generate shapes
-		params.fatness_scale = S.attractor->m_fatness_scale;
-		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-	}
-
-	// Generate tri index
-	GenerateTriIndices( init_shapes, num_local_points );
-
-	std::string filename = "StrangeAttractor_";
-	filename += att0.GetClassName();
-	filename += "_curl.obj";
-	WriteObjFile( filename.c_str(), init_shapes );
-}
+//void SAUtils::ComputeStrangeAttractorGradient()
+//{
+//	AttractorShape S0;
+//	Array<AttractorShape> init_shapes;
+//
+//	AizawaAttractor att0;
+//	S0.attractor = &att0;
+//
+//	AttractorShapeParams params;
+//	Array<vec3> local_shape;
+//	GenerateLocalShape( local_shape, params );
+//	const int32 num_local_points = local_shape.size();
+//
+//	S0.attractor->Loop(S0.line_points, 3000);
+//
+//	init_shapes.resize( S0.line_points.size() / 10 );
+//    
+//    Array<quat> frames;
+//    Array<float> follow_angles;
+//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
+//	{	
+//		AttractorShape& S = init_shapes[ShapeIdx];
+//		S.attractor = &att0;
+//		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
+//		S.attractor->LoopGradient(S.line_points, 200);
+//        
+//        GenerateFrames(S.line_points, frames, follow_angles);
+//
+//		// Generate shapes
+//		params.fatness_scale = S.attractor->m_fatness_scale;
+//		params.weld_vertex = true;
+//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
+//	}
+//
+//	// Generate tri index
+//	GenerateTriIndices( init_shapes, num_local_points );
+//
+//	std::string filename = "StrangeAttractor_";
+//	filename += att0.GetClassName();
+//	filename += "_gradient.obj";
+//	WriteObjFile( filename.c_str(), init_shapes );
+//}
+//
+//void SAUtils::ComputeStrangeAttractorCurl()
+//{
+//	AttractorShape S0;
+//	Array<AttractorShape> init_shapes;
+//
+//	//AizawaAttractor att0;
+//	//att0.m_init_point = vec3( 0.1f, 0, 0 );
+//
+//	LorenzAttractor att0;
+//	S0.attractor = &att0;
+//
+//	AttractorShapeParams params;
+//	Array<vec3> local_shape;
+//	GenerateLocalShape( local_shape, params );
+//	const int32 num_local_points = local_shape.size();
+//
+//	S0.attractor->Loop(S0.line_points, 2000);
+//
+//	init_shapes.resize( S0.line_points.size() / 10 );
+//    
+//    Array<quat> frames;
+//    Array<float> follow_angles;
+//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
+//	{	
+//		AttractorShape& S = init_shapes[ShapeIdx];
+//		S.attractor = &att0;
+//		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
+//		S.attractor->LoopCurl( S.line_points, 200 );
+//        
+//        GenerateFrames(S.line_points, frames, follow_angles);
+//
+//		// Generate shapes
+//		params.fatness_scale = S.attractor->m_fatness_scale;
+//		params.weld_vertex = true;
+//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
+//	}
+//
+//	// Generate tri index
+//	GenerateTriIndices( init_shapes, num_local_points );
+//
+//	std::string filename = "StrangeAttractor_";
+//	filename += att0.GetClassName();
+//	filename += "_curl.obj";
+//	WriteObjFile( filename.c_str(), init_shapes );
+//}
 
 void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points)
 {
@@ -237,17 +237,18 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 	}
 }
 
-void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist)
+void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, Array<AttractorLineFramed>& snapped_lines)
 {
 	// compute bounds
-	Array<int> snap_segments;
-    const int nb_points = line_points.size();
+	//Array<int> snap_segments;
+	const int nb_points = line_framed.points.size();
     Array<AABB> bounds;
-    ComputeBounds(line_points, merge_dist, bounds);
+	ComputeBounds(line_framed.points, merge_dist, bounds);
 	int nb_bounds = bounds.size();
 
 	Array<AttractorMergeInfo> line_merges;
 	line_merges.resize(nb_points);
+	Array<AttractorSnapRange> snap_ranges;
 
     int b_idx1 = 0;
 	while ( b_idx1 < nb_bounds )
@@ -262,13 +263,16 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
 			if (AABB::BoundsIntersect(b0, b1))
 			{
 				// potential merge, check whether at least one segment in b1 is near one in b0
-				ivec2 r_0, r_1;
-				if (FindSnapRange(line_points, b_idx0, b_idx1, merge_dist, r_0, r_1, snap_segments, line_merges))
+				//ivec2 r_0, r_1;
+				AttractorSnapRange snap_range;
+				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, merge_dist, snap_range/*r_0, r_1, snap_segments*/, line_merges))
 				{
+					snap_ranges.push_back(snap_range);
+
 					// ok, merge r_1 points to r_0
-					SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
+					//SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
                     
-                    next_idx = 1 + r_1.y / SAUtils::points_in_bound;
+					next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
 					break;
 				}
 			}
@@ -277,13 +281,69 @@ void SAUtils::MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHan
         b_idx1 = next_idx;
 	}
 
+	// merge snap_ranges if they are too close
+	int snap_idx = 0;
+	const int max_spacing_src = 3 * SAUtils::points_in_bound;
+	const int max_spacing_dst = 4 * SAUtils::points_in_bound;
+	while (snap_idx < snap_ranges.size() - 1)
+	{
+		int spacing_src = snap_ranges[snap_idx + 1].src_points.x - snap_ranges[snap_idx].src_points.y;
+		int spacing_dst = snap_ranges[snap_idx + 1].dst_segs.x - snap_ranges[snap_idx].dst_segs.y;
+		if (spacing_src < max_spacing_src && spacing_dst < max_spacing_dst) // trying to ensure that both lines are snapped onto the 'same' underlying line
+		{
+			snap_ranges[snap_idx].src_points.y = snap_ranges[snap_idx + 1].src_points.y;
+			snap_ranges[snap_idx].dst_segs.y = snap_ranges[snap_idx + 1].dst_segs.y;
+			snap_ranges.erase(snap_idx + 1);
+		}
+		else
+			snap_idx++;
+	}
+
+	// build snapped_lines array
+	const int nb_range = snap_ranges.size();
+	if (nb_range > 0)
+	{
+		snapped_lines.reserve(nb_range + 2);
+
+		for (snap_idx = -1; snap_idx < nb_range; snap_idx++)
+		{
+			int start_idx = (snap_idx >= 0 ? snap_ranges[snap_idx].src_points.y : 0);
+			int end_idx = (snap_idx < nb_range - 1 ? snap_ranges[snap_idx + 1].src_points.x : line_framed.points.size() - 1);
+
+			if (end_idx - start_idx < 3)
+				continue;
+
+			AttractorLineFramed new_framed;
+			snapped_lines.push_back(new_framed);
+			AttractorLineFramed& ref_framed = snapped_lines.Last();
+
+			// copy
+			for (int idx = start_idx; idx <= end_idx; idx++)
+			{
+				ref_framed.points.push_back(line_framed.points[idx]);
+				ref_framed.frames.push_back(line_framed.frames[idx]);
+				ref_framed.follow_angles.push_back(line_framed.follow_angles[idx]);
+			}
+		}
+	}
+	else
+	{
+		snapped_lines.push_back(line_framed);
+	}
+	
 	// propagate move smoothly to points before and after
-	static int smooth_dist = SAUtils::points_in_bound;
+
+
+	//static int smooth_dist = SAUtils::points_in_bound;
+	//for (int p_idx = 0; p_idx < nb_points; p_idx++)
+	//{
+	//	line_merges[p_idx].
+	//}
 }
 
-bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges)
+bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range/*, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments*/, Array<AttractorMergeInfo>& line_merges)
 {
-	snap_segments.clear();
+	//snap_segments.clear();
 
 	int start_0 = bigball::max( 0, b_idx0 * SAUtils::points_in_bound - 1 );
 	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
@@ -330,10 +390,10 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 	vec3 dir_0 = line_points[min_seg_0 + 1] - line_points[min_seg_0];
 	vec3 dir_1 = line_points[min_seg_1 + 1] - line_points[min_seg_1];
 	int inc = bigball::dot(dir_0, dir_1) > 0.f ? 1 : -1;
-	r_0.x = prev_seg_0;
-	r_0.y = min_seg_0;
-	r_1.x = min_seg_1;
-	r_1.y = min_seg_1 + 1;
+	snap_range.dst_segs.x = prev_seg_0;
+	snap_range.dst_segs.y = min_seg_0;
+	snap_range.src_points.x = min_seg_1;
+	snap_range.src_points.y = min_seg_1 + 1;
 	//snap_segments.push_back(prev_seg_0);
 	//snap_segments.push_back(min_seg_0);
     
@@ -345,8 +405,8 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 
 	// left (r_1.x)
 	{
-		int cur_seg_0 = r_0.x;
-		int& c_1 = r_1.x;
+		int cur_seg_0 = snap_range.dst_segs.x;
+		int& c_1 = snap_range.src_points.x;
 		int c_1_next = c_1;
 		while (c_1_next >= 0)
 		{
@@ -360,7 +420,8 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 			if (sq_dist < sq_merge_dist)
 			{
 				// move on to next point
-				snap_segments.insert(cur_seg_0, 0);
+				snap_range.dst_segs.x = cur_seg_0;
+				//snap_segments.insert(cur_seg_0, 0);
 				c_1 = c_1_next--;
 				continue;
 			}
@@ -386,13 +447,14 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 				break;
 			}
 		}
-		r_0.x = cur_seg_0;
+		//snap_range.dst_segs.x = cur_seg_0;
+		//r_0.x = cur_seg_0;
 	}
     
     // right (r_1.y)
     {
-		int cur_seg_0 = r_0.y;
-		int& c_1 = r_1.y;
+		int cur_seg_0 = snap_range.dst_segs.y;
+		int& c_1 = snap_range.src_points.y;
 		int c_1_next = c_1;
 		while(c_1_next < nb_points)
 		{
@@ -400,7 +462,7 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 			if(sq_dist < sq_merge_dist)
 			{
 				// move on to next point
-				snap_segments.push_back(cur_seg_0);
+				snap_range.dst_segs.y = cur_seg_0;
 				c_1 = c_1_next++;
 				continue;
 			}
@@ -426,113 +488,121 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 				break;
 			}
 		}
-		r_0.y = cur_seg_0 + 1;
+		//snap_range.dst_segs.y = cur_seg_0;
+		//r_0.y = cur_seg_0 + 1;
     }
 
 	return true;
 }
+//
+//void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, /*ivec2 r_0, ivec2 r_1,*/ Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges)
+//{
+//	BB_ASSERT_LOG(r_1.y - r_1.x + 1 == snap_segments.size(), ("SnapRange error"));
+//	const float sq_merge_dist = merge_dist * merge_dist;
+//
+//	for (int s = 0; s < snap_segments.size(); s++)
+//	{
+//		int c_1 = r_1.x + s;
+//		const vec3& seg_0 = line_points[snap_segments[s]];
+//		const vec3& seg_1 = line_points[snap_segments[s] + 1];
+//
+//		float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1], seg_0, seg_1, t);
+//		if (sq_dist < sq_merge_dist)
+//		{
+//			// overwrite point
+//			line_points[c_1] = seg_0 * (1.f - t) + seg_1 * t;
+//            line_merges[c_1].merge_parent_idx = snap_segments[s];
+//			line_merges[c_1].weight = 1.f;
+//		}
+//		else
+//			int Oups = 0;
+//	}
+//}
 
-void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges)
+void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
 {
-	BB_ASSERT_LOG(r_1.y - r_1.x + 1 == snap_segments.size(), ("SnapRange error"));
-	const float sq_merge_dist = merge_dist * merge_dist;
+	Array<vec3> local_shape;
+	GenerateLocalShape(local_shape, params);
+	const int32 num_local_points = local_shape.size();
 
-	for (int s = 0; s < snap_segments.size(); s++)
+	for (int line_idx = 0; line_idx < snapped_lines.size(); line_idx++)
 	{
-		int c_1 = r_1.x + s;
-		const vec3& seg_0 = line_points[snap_segments[s]];
-		const vec3& seg_1 = line_points[snap_segments[s] + 1];
+		AttractorLineFramed const & line_framed = snapped_lines[line_idx];
 
-		float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1], seg_0, seg_1, t);
-		if (sq_dist < sq_merge_dist)
-		{
-			// overwrite point
-			line_points[c_1] = seg_0 * (1.f - t) + seg_1 * t;
-            line_merges[c_1].merge_parent_idx = snap_segments[s];
-			line_merges[c_1].weight = 1.f;
-		}
-		else
-			int Oups = 0;
+		int32 base_vertex = tri_vertices.size();
+		GenerateTriVertices(tri_vertices, tri_normals, local_shape, line_framed.points, line_framed.frames, line_framed.follow_angles, params);
+
+		GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
 	}
 }
 
-void SAUtils::GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
-{
-	Array<vec3> local_shape;
-	GenerateLocalShape( local_shape, params );
-	const int32 num_local_points = local_shape.size();
-
-	GenerateTriVertices(tri_vertices, tri_normals, local_shape, line_points, frames, follow_angles, params);
-	GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex);
-}
-
-void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter)
-{
-	// Lorentz attractor
-
-	Array<AttractorShape> init_shapes;
-	//LorenzAttractor att0;//, Att1;
-	//att0.m_init_point = vec3( 5.0, 0, 0 );
-	//Att1.m_init_point = vec3( 5.0, 5.0, 5.0 );
-	
-	/*AizawaAttractor att0;
-	att0.m_max_iter = 5000;
-	att0.m_fatness_scale = 0.1f;*/
-
-	//att0.m_init_point = vec3( 0.1f, 0, 0 );
-	//TSUCS2Attractor att0;
-	//att0.m_init_point = vec3( 0.0, -0.05f, 0.01f );
-
+//void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter)
+//{
+//	// Lorentz attractor
+//
+//	Array<AttractorShape> init_shapes;
+//	//LorenzAttractor att0;//, Att1;
+//	//att0.m_init_point = vec3( 5.0, 0, 0 );
+//	//Att1.m_init_point = vec3( 5.0, 5.0, 5.0 );
+//	
+//	/*AizawaAttractor att0;
 //	att0.m_max_iter = 5000;
-////	att0.m_init_point = vec3( -7.85f, -9.94f, 23.01f );
-//	//att0.m_init_point = vec3( -2.0, -2.4f, 7.0 );
-//	att0.m_init_point = vec3( 4.0, 0.01f, 0.5f );
-//	att0.m_fatness_scale = 0.4f;
-
-	AttractorShape AS0;
-	AS0.attractor = attractor;
-	AS0.attractor->m_init_point = seed;
-
-	//AS1.Attractor = &Att1;
-	//AS1.m_max_iter = m_max_iter;
-	init_shapes.push_back( AS0 );
-	//init_shapes.push_back( AS1 );
-
-	AttractorShapeParams params;
-	Array<vec3> local_shape;
-	GenerateLocalShape( local_shape, params );
-	const int32 num_local_points = local_shape.size();
-    
-    Array<quat> frames;
-    Array<float> follow_angles;
-
-	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-	{	
-		AttractorShape& S = init_shapes[ShapeIdx];
-		S.attractor->LoopAdaptative(S.line_points, iter);
-        
-        GenerateFrames(S.line_points, frames, follow_angles);
-
-		// Generate shapes
-		params.fatness_scale = S.attractor->m_fatness_scale;
-		params.weld_vertex = true;
-		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-	}
-
-	// Generate tri index
-	GenerateTriIndices( init_shapes, num_local_points );
-
-	std::string filename = "StrangeAttractor_";
-	filename += AS0.attractor->GetClassName();
-	filename += ".obj";
-	WriteObjFile( filename.c_str(), init_shapes );
-}
+//	att0.m_fatness_scale = 0.1f;*/
+//
+//	//att0.m_init_point = vec3( 0.1f, 0, 0 );
+//	//TSUCS2Attractor att0;
+//	//att0.m_init_point = vec3( 0.0, -0.05f, 0.01f );
+//
+////	att0.m_max_iter = 5000;
+//////	att0.m_init_point = vec3( -7.85f, -9.94f, 23.01f );
+////	//att0.m_init_point = vec3( -2.0, -2.4f, 7.0 );
+////	att0.m_init_point = vec3( 4.0, 0.01f, 0.5f );
+////	att0.m_fatness_scale = 0.4f;
+//
+//	AttractorShape AS0;
+//	AS0.attractor = attractor;
+//	AS0.attractor->m_init_point = seed;
+//
+//	//AS1.Attractor = &Att1;
+//	//AS1.m_max_iter = m_max_iter;
+//	init_shapes.push_back( AS0 );
+//	//init_shapes.push_back( AS1 );
+//
+//	AttractorShapeParams params;
+//	Array<vec3> local_shape;
+//	GenerateLocalShape( local_shape, params );
+//	const int32 num_local_points = local_shape.size();
+//    
+//    Array<quat> frames;
+//    Array<float> follow_angles;
+//
+//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
+//	{	
+//		AttractorShape& S = init_shapes[ShapeIdx];
+//		S.attractor->LoopAdaptative(S.line_points, iter);
+//        
+//        GenerateFrames(S.line_points, frames, follow_angles);
+//
+//		// Generate shapes
+//		params.fatness_scale = S.attractor->m_fatness_scale;
+//		params.weld_vertex = true;
+//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
+//	}
+//
+//	// Generate tri index
+//	GenerateTriIndices( init_shapes, num_local_points );
+//
+//	std::string filename = "StrangeAttractor_";
+//	filename += AS0.attractor->GetClassName();
+//	filename += ".obj";
+//	WriteObjFile( filename.c_str(), init_shapes );
+//}
 
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void SAUtils::GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles )
+void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vx_prev, vy_prev, vz_prev;
@@ -543,9 +613,13 @@ void SAUtils::GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames
     //VY_array.resize( line_points.size() );      // FRONT  --> UP
     //VZ_array.resize( line_points.size() );      // UP     --> RIGHT
     //VX_follow_array.resize( line_points.size() );
+
+	Array<vec3> const& line_points = line_framed.points;
+	Array<quat>& frames = line_framed.frames;
+	Array<float>& follow_angles = line_framed.follow_angles;
     
-    frames.resize(line_points.size());
-    follow_angles.resize(line_points.size());
+	line_framed.frames.resize(line_points.size());
+	line_framed.follow_angles.resize(line_points.size());
     
     for( int32 i = 1; i < line_points.size()-1; i++ )
     {
@@ -596,6 +670,7 @@ void SAUtils::GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames
 
 void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params)
 {
+	const int32 base_vertex = tri_vertices.size();
 	vec3 P_prev, P_current, P_next, VX_follow;
 
 #if DEAD_CODE
@@ -725,7 +800,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 	}
 
 	// For capping...
-	int32 ShapeWOCapCount = tri_vertices.size();
+	int32 ShapeWOCapCount = tri_vertices.size() - base_vertex;
 	tri_vertices.push_back(line_points[1]);
 	vec3 start_normal = normalize(line_points[0] - line_points[1]);
 	if (tri_normals)
@@ -734,7 +809,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 	{
 		// Push start vertices
 		for( int32 j = 0; j < num_local_points; ++j )
-			tri_vertices.push_back(tri_vertices[2 * j]);
+			tri_vertices.push_back(tri_vertices[base_vertex + 2 * j]);
 
 		if (tri_normals)
 		{ 
@@ -751,7 +826,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 	{
 		// Push end vertices
 		for( int32 j = 0; j < num_local_points; ++j )
-			tri_vertices.push_back(tri_vertices[ShapeWOCapCount - 2 * num_local_points + 2 * j]);
+			tri_vertices.push_back(tri_vertices[base_vertex + ShapeWOCapCount - 2 * num_local_points + 2 * j]);
 
 		if (tri_normals)
 		{
@@ -767,79 +842,79 @@ void SAUtils::GenerateTriIndices(Array<AttractorShape>& vShapes, int32 num_local
 	for( int32 ShapeIdx = 0; ShapeIdx < vShapes.size(); ShapeIdx++ )
 	{	
 		AttractorShape& S = vShapes[ShapeIdx];
-		GenerateTriIndices(S.tri_vertices, num_local_points, S.tri_indices, true/*bWeldVertex*/);
+		GenerateTriIndices(S.tri_vertices, num_local_points, S.tri_indices, true/*bWeldVertex*/, 0/*base_vertex*/);
 	}
 }
 
-void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_local_points, Array<int32>& tri_indices, const bool bWeldVertex)
+void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_local_points, Array<int32>& tri_indices, const bool bWeldVertex, int32 base_vertex)
 {
 	// Generate tri index
 	if( bWeldVertex )
 	{
-		const int32 nShape = tri_vertices.size() / num_local_points;
+		const int32 nShape = (tri_vertices.size() - base_vertex) / num_local_points;
 		for( int32 i=0; i<nShape-1; i++ ) 
 		{
 			for( int32 j = 0; j < num_local_points; ++j )
 			{
-				tri_indices.push_back(i * num_local_points + j);
-				tri_indices.push_back((i + 1) * num_local_points + j);
-				tri_indices.push_back(i * num_local_points + (1 + j) % num_local_points);
+				tri_indices.push_back(base_vertex + i * num_local_points + j);
+				tri_indices.push_back(base_vertex + (i + 1) * num_local_points + j);
+				tri_indices.push_back(base_vertex + i * num_local_points + (1 + j) % num_local_points);
 
-				tri_indices.push_back(i * num_local_points + (1 + j) % num_local_points);
-				tri_indices.push_back((i + 1) * num_local_points + j);
-				tri_indices.push_back((i + 1) * num_local_points + (1 + j) % num_local_points);
+				tri_indices.push_back(base_vertex + i * num_local_points + (1 + j) % num_local_points);
+				tri_indices.push_back(base_vertex + (i + 1) * num_local_points + j);
+				tri_indices.push_back(base_vertex + (i + 1) * num_local_points + (1 + j) % num_local_points);
 
 			}
 		}
 
 		// First cap
-		int32 nShapeSize = tri_vertices.size();
+		int32 nShapeSize = tri_vertices.size() - base_vertex;
 		int32 Cap0 = nShapeSize - 2;
 		int32 Cap1 = nShapeSize - 1;
 
 		for( int32 j = 0; j < num_local_points; ++j )
 		{
-			tri_indices.push_back( Cap0 );
-			tri_indices.push_back( 0 * num_local_points + j );
-			tri_indices.push_back( 0 * num_local_points + (1 + j) % num_local_points );
+			tri_indices.push_back(base_vertex + Cap0);
+			tri_indices.push_back(base_vertex + 0 * num_local_points + j);
+			tri_indices.push_back(base_vertex + 0 * num_local_points + (1 + j) % num_local_points);
 		}
 
 		// Second cap
 		for( int32 j = 0; j < num_local_points; ++j )
 		{
-			tri_indices.push_back( Cap1 );
-			tri_indices.push_back( (nShape-1) * num_local_points + (1 + j) % num_local_points );
-			tri_indices.push_back( (nShape-1) * num_local_points + j );
+			tri_indices.push_back(base_vertex + Cap1);
+			tri_indices.push_back(base_vertex + (nShape - 1) * num_local_points + (1 + j) % num_local_points);
+			tri_indices.push_back(base_vertex + (nShape - 1) * num_local_points + j);
 		}
 	}
 	else
 	{
-		const int32 nShape = tri_vertices.size() / (2 * num_local_points) - 1;
+		const int32 nShape = (tri_vertices.size() - base_vertex) / (2 * num_local_points) - 1;
 		for( int32 i=0; i<nShape-1; i++ ) 
 		{
 			for( int32 j = 0; j < num_local_points; ++j )
 			{
-				tri_indices.push_back( i * 2*num_local_points + (2*j+1) );
-				tri_indices.push_back( (i+1) * 2*num_local_points + (2*j+1) );
-				tri_indices.push_back( i * 2*num_local_points + (2*j+2) % (2*num_local_points) );
+				tri_indices.push_back(base_vertex + i * 2 * num_local_points + (2 * j + 1));
+				tri_indices.push_back(base_vertex + (i + 1) * 2 * num_local_points + (2 * j + 1));
+				tri_indices.push_back(base_vertex + i * 2 * num_local_points + (2 * j + 2) % (2 * num_local_points));
 
-				tri_indices.push_back( i * 2*num_local_points + (2*j+2) % (2*num_local_points) );
-				tri_indices.push_back( (i+1) * 2*num_local_points + (2*j+1) );
-				tri_indices.push_back( (i+1) * 2*num_local_points + (2*j+2) % (2*num_local_points) );
+				tri_indices.push_back(base_vertex + i * 2 * num_local_points + (2 * j + 2) % (2 * num_local_points));
+				tri_indices.push_back(base_vertex + (i + 1) * 2 * num_local_points + (2 * j + 1));
+				tri_indices.push_back(base_vertex + (i + 1) * 2 * num_local_points + (2 * j + 2) % (2 * num_local_points));
 
 			}
 		}
 
 		// First cap
-		int32 nShapeSize = tri_vertices.size();
+		int32 nShapeSize = tri_vertices.size() - base_vertex;
 		int32 Cap0 = nShapeSize - 2 - 2*num_local_points;
 		int32 Cap1 = nShapeSize - 1 - num_local_points;
 
 		for( int32 j = 0; j < num_local_points; ++j )
 		{
-			tri_indices.push_back( Cap0 );
-			tri_indices.push_back( Cap0 + 1 + j );
-			tri_indices.push_back( Cap0 + 1 + (j+1)%num_local_points );
+			tri_indices.push_back(base_vertex + Cap0);
+			tri_indices.push_back(base_vertex + Cap0 + 1 + j);
+			tri_indices.push_back(base_vertex + Cap0 + 1 + (j + 1) % num_local_points);
 			//tri_indices.push_back( 0 * 2*num_local_points + (2*j+1) );
 			//tri_indices.push_back( 0 * 2*num_local_points + (2*j+2) % (2*num_local_points) );
 		}
@@ -847,9 +922,9 @@ void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_loca
 		// Second cap
 		for( int32 j = 0; j < num_local_points; ++j )
 		{
-			tri_indices.push_back( Cap1 );
-			tri_indices.push_back(Cap1 + 1 + (j + 1) % num_local_points);
-			tri_indices.push_back( Cap1 + 1 + j );
+			tri_indices.push_back(base_vertex + Cap1);
+			tri_indices.push_back(base_vertex + Cap1 + 1 + (j + 1) % num_local_points);
+			tri_indices.push_back(base_vertex + Cap1 + 1 + j);
 			//tri_indices.push_back( (nShape-1) * 2*num_local_points + (2*j+2) % (2*num_local_points) );
 			//tri_indices.push_back( (nShape-1) * 2*num_local_points + (2*j+1) );
 		}

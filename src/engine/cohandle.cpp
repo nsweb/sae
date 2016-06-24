@@ -126,8 +126,8 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 		AttractorHandle const& handle = m_handles[h_idx];
 
 		{
-			vec3 world_line_handle_pos = attr_transform.TransformPosition(attractor->m_line_points[handle.m_line_idx]);
-			quat world_line_handle_quat = attr_transform.GetRotation() * attractor->m_frames[handle.m_line_idx];
+			vec3 world_line_handle_pos = attr_transform.TransformPosition(attractor->m_line_framed.points[handle.m_line_idx]);
+			quat world_line_handle_quat = attr_transform.GetRotation() * attractor->m_line_framed.frames[handle.m_line_idx];
 			transform h_line_transform(world_line_handle_quat, world_line_handle_pos, cube_size);
 			vec3 ray_start_box = h_line_transform.TransformPositionInverse(ray_start);
 			vec3 ray_end_box = h_line_transform.TransformPositionInverse(ray_end);
@@ -143,7 +143,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 		}
         
 		{
-			vec3 world_mesh_handle_pos = attr_transform.TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
+			vec3 world_mesh_handle_pos = attr_transform.TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
 			transform h_mesh_transform(quat(1.f, 0.f, 0.f, 0.f), world_mesh_handle_pos, cube_size);
 			vec3 ray_start_sphere = h_mesh_transform.TransformPositionInverse(ray_start);
 			vec3 ray_end_sphere = h_mesh_transform.TransformPositionInverse(ray_end);

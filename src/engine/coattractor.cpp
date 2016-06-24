@@ -85,12 +85,10 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
     bool line_changed = false;
 	if (force_rebuild || !(m_line_params == m_cached_line_params))
 	{
-        m_line_points.clear();
-        m_frames.clear();
-		m_follow_angles.clear();
+		m_line_framed.Clear();
 
-        SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_points);
-        SAUtils::GenerateFrames(m_line_points, m_frames, m_follow_angles);
+		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_framed.points);
+		SAUtils::GenerateFrames(m_line_framed);
 		if (!keep_handle)
 			cohandle->m_handles.clear();
         line_changed = true;
@@ -109,16 +107,15 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
         else
         {
             //cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
-            cohandle->m_handles.Last().m_line_idx = m_line_points.size() - 2;
-            cohandle->m_handles.Last().m_mesh_idx = m_line_points.size() - 2;
+			cohandle->m_handles.Last().m_line_idx = m_line_framed.points.size() - 2;
+			cohandle->m_handles.Last().m_mesh_idx = m_line_framed.points.size() - 2;
         }
     }
 
 	if (force_rebuild || line_changed || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
 	{
-		m_twist_line_points.clear();
-		m_twist_frames.clear();
-		m_twist_follow_angles.clear();
+		m_snapped_lines.clear();
+
         m_tri_vertices.clear();
         m_tri_normals.clear();
         m_tri_indices.clear();
@@ -128,12 +125,14 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 		// TODO sort handles by line_idx
 
 		// Twist line points to adapt to handles
-        if( m_line_params.merge_dist > 0.f )
-            SAUtils::MergeLinePoints(m_line_points, cohandle->m_handles, m_line_params.merge_dist);
+		if (m_shape_params.merge_dist > 0.f)
+			SAUtils::MergeLinePoints(m_line_framed, cohandle->m_handles, m_shape_params.merge_dist, m_snapped_lines);
+		else
+			m_snapped_lines.push_back( m_line_framed );
 		//SAUtils::TwistLinePoints(m_line_points, m_frames, m_follow_angles, cohandle->m_handles, m_twist_line_points, m_twist_frames, m_twist_follow_angles);
 		// Generate mesh from twisted line
 		//SAUtils::GenerateSolidMesh(m_twist_line_points, m_twist_frames, m_twist_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
-        SAUtils::GenerateSolidMesh(m_line_points, m_frames, m_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+		SAUtils::GenerateSolidMesh(m_snapped_lines, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
 	}
     
     vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
@@ -180,7 +179,7 @@ void CoAttractor::UpdateVertexBuffers()
 	glEnableVertexAttribArray(0);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBLinePoints]);
-	glBufferData(GL_ARRAY_BUFFER, m_line_points.size() * sizeof(vec3), m_line_points.Data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, m_line_framed.points.size() * sizeof(vec3), m_line_framed.points.Data(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3) /*stride*/, (void*)0 /*offset*/);
 
 	glBindVertexArray(0);
@@ -233,9 +232,9 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
 	const float sq_width = ray_width * ray_width;
     
 	pick_result.m_line_idx = INDEX_NONE;
-	for (int32 i = 0; i < m_line_points.size(); i++)
+	for (int32 i = 0; i < m_line_framed.points.size(); i++)
 	{
-        vec3 point = m_line_points[i];
+		vec3 point = m_line_framed.points[i];
         
 		// square dist to segment
         float t;
@@ -248,7 +247,7 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
     
 	if (pick_result.m_line_idx != INDEX_NONE)
     {
-		pick_result.m_hit_pos = t.TransformPosition(m_line_points[pick_result.m_line_idx]);
+		pick_result.m_hit_pos = t.TransformPosition(m_line_framed.points[pick_result.m_line_idx]);
         return true;
     }
     

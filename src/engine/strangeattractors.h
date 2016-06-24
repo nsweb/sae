@@ -358,7 +358,6 @@ struct AttractorLineParams
 	int32 warmup_iter;
 	float step_factor;
 	float target_dim;
-    float merge_dist;
 
 	// shape shearing
 	float shearing_angle;
@@ -372,7 +371,6 @@ struct AttractorLineParams
 		warmup_iter(200),
 		step_factor(4.f),
 		target_dim(0.f),
-        merge_dist(0.f),
 		shearing_angle(0.f),
 		shearing_scale_x(1.f),
 		shearing_scale_y(1.f)
@@ -381,7 +379,7 @@ struct AttractorLineParams
 	bool operator == (AttractorLineParams& oth)
 	{
 		return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && warmup_iter == oth.warmup_iter && step_factor == oth.step_factor 
-			&& target_dim == oth.target_dim && merge_dist == oth.merge_dist && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
+			&& target_dim == oth.target_dim && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
 	}
 };
 
@@ -396,6 +394,7 @@ struct AttractorShapeParams
 	float crease_depth;
 	float crease_width;
 	float crease_bevel;
+	float merge_dist;
 
 	AttractorShapeParams() :
 		fatness_scale(1.0f),
@@ -406,13 +405,14 @@ struct AttractorShapeParams
 		local_edge_count(5),
 		crease_depth(0.0f),
 		crease_width(0.0f),
-		crease_bevel(0.0f)
+		crease_bevel(0.0f),
+		merge_dist(0.f)
 	{}
 
 	bool operator == (AttractorShapeParams& oth)
 	{
 		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
-			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel;
+			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist;
 	}
 };
 
@@ -472,9 +472,31 @@ struct AABB
 
 struct AttractorMergeInfo
 {
-    AttractorMergeInfo() : merge_parent_idx(INDEX_NONE) {}
+	AttractorMergeInfo() : merge_parent_idx(INDEX_NONE), weight(0.f) {}
     
     int merge_parent_idx;
+	float weight;
+};
+
+struct AttractorSnapRange
+{
+	ivec2 dst_segs;
+	ivec2 src_points;
+};
+
+struct AttractorLineFramed
+{
+	AttractorLineFramed()	{}
+	void Clear()
+	{
+		points.clear();
+		frames.clear();
+		follow_angles.clear();
+	}
+
+	Array<vec3>		points;
+	Array<quat>		frames;
+	Array<float>    follow_angles;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -484,17 +506,17 @@ namespace SAUtils
 {
 
 	void		ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
-	void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
-	void		ComputeStrangeAttractorCurl();
-	void		ComputeStrangeAttractorGradient();
-	void		GenerateSolidMesh(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
+	//void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
+	//void		ComputeStrangeAttractorCurl();
+	//void		ComputeStrangeAttractorGradient();
+	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
 
-    void        GenerateFrames(const Array<vec3>& line_points, Array<quat>& frames, Array<float>& follow_angles );
+	void        GenerateFrames(AttractorLineFramed& line_framed);
 	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
-	void		MergeLinePoints(Array<vec3>& line_points, const Array<AttractorHandle>& attr_handles, float merge_dist);
+	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, Array<AttractorLineFramed>& snapped_lines );
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
-	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex);
+	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
 	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params);
 
 	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
@@ -510,8 +532,8 @@ namespace SAUtils
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
-	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges);
-	void SnapRange(Array<vec3>& line_points, float merge_dist, ivec2 r_0, ivec2 r_1, Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges);
+	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range /*ivec2& r_0, ivec2& r_1, Array<int>& snap_segments*/, Array<AttractorMergeInfo>& line_merges);
+	//void SnapRange(Array<vec3>& line_points, float merge_dist, /*ivec2 r_0, ivec2 r_1,*/ Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges);
     //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 

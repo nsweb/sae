@@ -108,7 +108,7 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 			m_line_shader->SetUniform(uni_world, world_mat);
 			m_line_shader->SetUniform(uni_color, vec3(sel_idx, (float)attractor->m_view_handle_range, 1.0f));
 			glBindVertexArray(attractor->m_varrays[CoAttractor::eVALinePoints]);
-			const int line_count = attractor->m_line_points.size() - 1;
+			const int line_count = attractor->m_line_framed.points.size() - 1;
 			glDrawArrays(GL_LINE_STRIP, 0, line_count);
 			glBindVertexArray(0);
 
@@ -160,7 +160,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
 
-		const int num_points = attractor->m_line_points.size();
+		const int num_points = attractor->m_line_framed.points.size();
 		const float cube_size = 2.f * copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
 
 		int32 num_handle = cohandle->m_handles.size();
@@ -170,14 +170,14 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			
 			if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
 			{
-				vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_line_idx]);
-                quat world_line_handle_quat = copos->GetRotation() * attractor->m_frames[handle.m_line_idx];
+				vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_line_idx]);
+				quat world_line_handle_quat = copos->GetRotation() * attractor->m_line_framed.frames[handle.m_line_idx];
 				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && m_editor_selected.m_line_handle;
 				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && m_editor_hovered.m_line_handle;
 				u8vec4 line_col = is_line_selected ? u8vec4(255, 250, 130, 255) : is_line_hovered ? u8vec4(255, 127, 255, 255) : u8vec4(255, 0, 255, 255);
 				DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), line_col, 0.5f, 0.5f);
                 
-                vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_points[handle.m_mesh_idx]);
+				vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
 				bool is_mesh_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && !m_editor_selected.m_line_handle;
 				bool is_mesh_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && !m_editor_hovered.m_line_handle;
 				u8vec4 mesh_col = is_mesh_selected ? u8vec4(255, 250, 130, 255) : is_mesh_hovered ? u8vec4(160, 200, 255, 255) : u8vec4(0, 200, 255, 255);

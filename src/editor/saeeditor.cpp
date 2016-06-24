@@ -284,7 +284,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
-        ImGui::InputFloat("Merge dist", &attractor->m_line_params.merge_dist);
+		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
 
 		ImGui::Separator();
         
@@ -354,7 +354,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
 
             bool insert_before = (current_selection.m_handle_idx != 0);
-            bool insert_after = handle.m_line_idx < attractor->m_line_points.size() - 2; // (current_selection.m_handle_idx != num_handles - 1 );
+			bool insert_after = handle.m_line_idx < attractor->m_line_framed.points.size() - 2; // (current_selection.m_handle_idx != num_handles - 1 );
             if ( (insert_before && ImGui::Button("Insert before", ImVec2(0,20))) ||
                  (!insert_before && ImGui::InvisibleButton("", ImVec2(1,20))))
             {
@@ -382,8 +382,8 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             ImGui::InputInt("line idx", &handle.m_line_idx);
             ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
             
-            handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_points.size() - 2);
-            handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_points.size() - 2);
+			handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_framed.points.size() - 2);
+			handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_framed.points.size() - 2);
             
             const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
             ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, AttractorHandle::eHT_Count);
