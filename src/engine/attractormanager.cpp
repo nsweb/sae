@@ -22,6 +22,7 @@ AttractorManager::AttractorManager() :
 	m_line_shader(nullptr),
 	m_mesh_shader(nullptr),
 	m_show_handles(false),
+    m_show_lines(true),
     m_prev_mouse_left_down(false)
 {
 	m_pStaticInstance = this;
@@ -82,8 +83,10 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
     mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
     mat4 view_mat = bigball::inverse(view_inv_mat);
     
-	m_line_shader->Bind();
+    if( m_show_lines )
 	{
+        m_line_shader->Bind();
+        
 		ShaderUniform uni_world = m_line_shader->GetUniformLocation("world_mat");
 		ShaderUniform uni_view = m_line_shader->GetUniformLocation("view_mat");
 		m_line_shader->SetUniform(uni_view, view_mat);
@@ -98,7 +101,7 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 			CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 
 			float sel_idx = -1.f;
-			if (m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
 			{
 				AttractorHandle const& handle = cohandle->GetHandle(m_editor_selected.m_handle_idx);
 				sel_idx = (float)handle.m_mesh_idx;
@@ -113,8 +116,9 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 			glBindVertexArray(0);
 
 		}
+        
+        m_line_shader->Unbind();
 	}
-	m_line_shader->Unbind();
 
 	m_mesh_shader->Bind();
 	{
@@ -132,7 +136,7 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 			//CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 
 			float alpha = 1.f;
-			if (m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
 			{
 				alpha = 0.5f;
 			}

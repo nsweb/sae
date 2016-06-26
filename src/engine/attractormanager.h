@@ -57,7 +57,7 @@ public:
     
     void                SerializeAttractor(Archive& file);
 
-protected:
+public:
 
     Array<CoAttractor*> m_attractors;
     AttractorSelection  m_editor_selected;
@@ -67,6 +67,7 @@ protected:
     Shader*             m_line_shader;
     Shader*             m_mesh_shader;
 	bool				m_show_handles;
+    bool                m_show_lines;
     bool                m_prev_mouse_left_down;
 
 	void				DrawAttractors(struct RenderContext& render_ctxt);

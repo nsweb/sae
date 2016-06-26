@@ -458,7 +458,13 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 		int c_1_next = c_1;
 		while(c_1_next < nb_points)
 		{
-			float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+            if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
+            {
+                // reaching an already merged section, abort snapping
+                return false;
+            }
+
+            float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
 			if(sq_dist < sq_merge_dist)
 			{
 				// move on to next point

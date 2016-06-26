@@ -401,7 +401,12 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		//}
 
     }
-
+    
+    if (ImGui::CollapsingHeader("Display"))
+    {
+        ImGui::Checkbox("show lines", &AttractorManager::GetStaticInstance()->m_show_lines);
+    }
+    
     ImGui::End();
 }
 
