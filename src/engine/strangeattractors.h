@@ -533,6 +533,7 @@ namespace SAUtils
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
 	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range /*ivec2& r_0, ivec2& r_1, Array<int>& snap_segments*/, Array<AttractorMergeInfo>& line_merges);
+	int	FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, int cur_seg_0, int inc, float sq_merge_dist, float& best_t);
 	//void SnapRange(Array<vec3>& line_points, float merge_dist, /*ivec2 r_0, ivec2 r_1,*/ Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges);
     //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
