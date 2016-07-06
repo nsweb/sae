@@ -285,6 +285,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
+		ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
 
 		ImGui::Separator();
         

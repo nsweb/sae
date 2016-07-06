@@ -237,7 +237,7 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 	}
 }
 
-void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, bool snap_interp, Array<AttractorLineFramed>& snapped_lines)
 {
 	// compute bounds
 	//Array<int> snap_segments;
@@ -249,6 +249,8 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	Array<AttractorMergeInfo> line_merges;
 	line_merges.resize(nb_points);
 	Array<AttractorSnapRange> snap_ranges;
+
+	const int min_spacing = 3 * SAUtils::points_in_bound;
 
     int b_idx1 = 0;
 	while ( b_idx1 < nb_bounds )
@@ -267,13 +269,16 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				AttractorSnapRange snap_range;
 				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, merge_dist, snap_range/*r_0, r_1, snap_segments*/, line_merges))
 				{
-					snap_ranges.push_back(snap_range);
+					if (snap_range.src_points.y - snap_range.src_points.x >= min_spacing)	// ignore snap_ranges if they are too short
+					{
+						snap_ranges.push_back(snap_range);
 
-					// ok, merge r_1 points to r_0
-					//SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
-                    
-					next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
-					break;
+						// ok, merge r_1 points to r_0
+						//SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
+
+						next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
+						break;
+					}
 				}
 			}
 		}
@@ -281,37 +286,56 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
         b_idx1 = next_idx;
 	}
 
-	// merge snap_ranges if they are too close
+	// merge colliding ranges
 	int snap_idx = 0;
-	const int max_spacing_src = 3 * SAUtils::points_in_bound;
-	const int max_spacing_dst = 4 * SAUtils::points_in_bound;
-	while (snap_idx < snap_ranges.size() - 1)
-	{
-		int spacing_src = snap_ranges[snap_idx + 1].src_points.x - snap_ranges[snap_idx].src_points.y;
-		int spacing_dst = snap_ranges[snap_idx + 1].dst_segs.x - snap_ranges[snap_idx].dst_segs.y;
-		if (spacing_src < max_spacing_src && spacing_dst < max_spacing_dst) // trying to ensure that both lines are snapped onto the 'same' underlying line
-		{
-			snap_ranges[snap_idx].src_points.y = snap_ranges[snap_idx + 1].src_points.y;
-			snap_ranges[snap_idx].dst_segs.y = snap_ranges[snap_idx + 1].dst_segs.y;
-			snap_ranges.erase(snap_idx + 1);
-		}
-		else
-			snap_idx++;
-	}
-
-	// remove snap_ranges if they are too short
-	snap_idx = 0;
-	const int min_spacing = 3 * SAUtils::points_in_bound;
 	while (snap_idx < snap_ranges.size())
 	{
-		int spacing_src = snap_ranges[snap_idx].src_points.y - snap_ranges[snap_idx].src_points.x;
-		if (spacing_src < min_spacing ) 
+		int snap_dist = snap_ranges[snap_idx].src_points.y - snap_ranges[snap_idx].src_points.x;
+		int snap_idx_comp = snap_idx + 1;
+		for ( ; snap_idx_comp < snap_ranges.size(); snap_idx_comp++)
 		{
-			snap_ranges.erase(snap_idx);
+			if (snap_ranges[snap_idx].src_points.y >= snap_ranges[snap_idx_comp].src_points.x && snap_ranges[snap_idx].src_points.x <= snap_ranges[snap_idx_comp].src_points.y)
+			{
+				break;	// collision
+			}
+		}
+
+		if (snap_idx_comp < snap_ranges.size())
+		{
+			int snap_dist_comp = snap_ranges[snap_idx_comp].src_points.y - snap_ranges[snap_idx_comp].src_points.x;
+			if (snap_dist_comp > snap_dist)
+			{
+				snap_ranges.erase(snap_idx);
+			}
+			else
+			{
+				snap_ranges.erase(snap_idx_comp);
+				snap_idx++;
+			}
 		}
 		else
+		{
 			snap_idx++;
+		}
 	}
+
+	// merge snap_ranges if they are too close
+	//int snap_idx = 0;
+	//const int max_spacing_src = 3 * SAUtils::points_in_bound;
+	//const int max_spacing_dst = 4 * SAUtils::points_in_bound;
+	//while (snap_idx < snap_ranges.size() - 1)
+	//{
+	//	int spacing_src = snap_ranges[snap_idx + 1].src_points.x - snap_ranges[snap_idx].src_points.y;
+	//	int spacing_dst = snap_ranges[snap_idx + 1].dst_segs.x - snap_ranges[snap_idx].dst_segs.y;
+	//	if (spacing_src < max_spacing_src && spacing_dst < max_spacing_dst) // trying to ensure that both lines are snapped onto the 'same' underlying line
+	//	{
+	//		snap_ranges[snap_idx].src_points.y = snap_ranges[snap_idx + 1].src_points.y;
+	//		snap_ranges[snap_idx].dst_segs.y = snap_ranges[snap_idx + 1].dst_segs.y;
+	//		snap_ranges.erase(snap_idx + 1);
+	//	}
+	//	else
+	//		snap_idx++;
+	//}
 
 	// build snapped_lines array
 	const int nb_range = snap_ranges.size();
@@ -332,24 +356,24 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			AttractorLineFramed& ref_framed = snapped_lines.Last();
 
 			const int lerp_spacing = SAUtils::points_in_bound;
-			if (snap_idx >= 0)
+			if (snap_idx >= 0 && snap_interp)
 			{
 				int cur_seg_0 = snap_ranges[snap_idx].dst_segs.y;
-				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
+				for (int d_idx = 0; d_idx <= lerp_spacing; d_idx++)
 				{
 					int src_idx = start_idx - d_idx;
-					float best_t, ratio_blend = 1.f - float(d_idx) / float(lerp_spacing);
+					float best_t, ratio_blend = float(d_idx) / float(lerp_spacing);
 					cur_seg_0 = FindNextBestSnapSeg(line_framed.points, src_idx, cur_seg_0, -1 /*inc*/, 1e8f, best_t);
 					if (cur_seg_0 == INDEX_NONE)
 						break;	// oups, should not happen
 
 					vec3 src_pos = line_framed.points[src_idx];
-					vec3 dst_pos = line_framed.points[cur_seg_0] * (1.f - best_t) + line_framed.points[cur_seg_0] * best_t;
+					vec3 dst_pos = line_framed.points[cur_seg_0] * (1.f - best_t) + line_framed.points[cur_seg_0 + 1] * best_t;
 					vec3 delta_pos = dst_pos - src_pos;
 					vec3 p = src_pos + delta_pos * ratio_blend;
-					ref_framed.points.insert(p, 0);
-					ref_framed.frames.push_back(line_framed.frames[src_idx]);
-					ref_framed.follow_angles.push_back(line_framed.follow_angles[src_idx]);
+					ref_framed.points.insert(p,0);
+					ref_framed.frames.insert(line_framed.frames[src_idx],0);
+					ref_framed.follow_angles.insert(line_framed.follow_angles[src_idx],0);
 				}
 			}
 
@@ -361,7 +385,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				ref_framed.follow_angles.push_back(line_framed.follow_angles[idx]);
 			}
 
-			if (snap_idx < nb_range - 1)
+			if (snap_idx < nb_range - 1 && snap_interp)
 			{
 				int cur_seg_0 = snap_ranges[snap_idx + 1].dst_segs.x;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
@@ -373,10 +397,10 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 						break;	// oups, should not happen
 
 					vec3 src_pos = line_framed.points[src_idx];
-					vec3 dst_pos = line_framed.points[cur_seg_0] * (1.f - best_t) + line_framed.points[cur_seg_0] * best_t;
+					vec3 dst_pos = line_framed.points[cur_seg_0] * (1.f - best_t) + line_framed.points[cur_seg_0 + 1] * best_t;
 					vec3 delta_pos = dst_pos - src_pos;
 					vec3 p = src_pos + delta_pos * ratio_blend;
-					ref_framed.points.insert(p, 0);
+					ref_framed.points.push_back(p);
 					ref_framed.frames.push_back(line_framed.frames[src_idx]);
 					ref_framed.follow_angles.push_back(line_framed.follow_angles[src_idx]);
 				}
@@ -463,7 +487,10 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 			float best_t;
 			cur_seg_0 = FindNextBestSnapSeg(line_points, c_1_next, cur_seg_0, -1 /*inc*/, sq_merge_dist, best_t);
 			if (cur_seg_0 != INDEX_NONE)
+			{
 				c_1 = c_1_next--;
+				snap_range.dst_segs.x = cur_seg_0;
+			}
 		}
 	}
     
@@ -483,7 +510,10 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 			float best_t;
 			cur_seg_0 = FindNextBestSnapSeg(line_points, c_1_next, cur_seg_0, 1 /*inc*/, sq_merge_dist, best_t);
 			if (cur_seg_0 != INDEX_NONE)
+			{
 				c_1 = c_1_next++;
+				snap_range.dst_segs.y = cur_seg_0;
+			}
 
 		}
 		//snap_range.dst_segs.y = cur_seg_0;

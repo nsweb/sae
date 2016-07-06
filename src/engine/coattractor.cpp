@@ -48,6 +48,22 @@ void CoAttractor::Create( Entity* owner, class json::Object* proto )
 			proto->GetStringValue(param_tok, attractor_str);
 			m_attractor = SAUtils::CreateAttractorType(attractor_str);
 		}
+		if (m_attractor)
+		{
+			param_tok = proto->GetToken("iter", json::PRIMITIVE, attractor_tok);
+			if (param_tok != INDEX_NONE)
+				m_line_params.iter = proto->GetIntValue(param_tok, m_line_params.iter);
+
+			param_tok = proto->GetToken("warmup_iter", json::PRIMITIVE, attractor_tok);
+			if (param_tok != INDEX_NONE)
+				m_line_params.warmup_iter = proto->GetIntValue(param_tok, m_line_params.warmup_iter);
+
+			param_tok = proto->GetToken("merge_dist", json::PRIMITIVE, attractor_tok);
+			if (param_tok != INDEX_NONE)
+				m_shape_params.merge_dist = proto->GetFloatValue(param_tok, m_shape_params.merge_dist);
+
+			
+		}
 	}
 }
 
@@ -126,7 +142,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 
 		// Twist line points to adapt to handles
 		if (m_shape_params.merge_dist > 0.f)
-			SAUtils::MergeLinePoints(m_line_framed, cohandle->m_handles, m_shape_params.merge_dist, m_snapped_lines);
+			SAUtils::MergeLinePoints(m_line_framed, cohandle->m_handles, m_shape_params.merge_dist, m_shape_params.snap_interp, m_snapped_lines);
 		else
 			m_snapped_lines.push_back( m_line_framed );
 		//SAUtils::TwistLinePoints(m_line_points, m_frames, m_follow_angles, cohandle->m_handles, m_twist_line_points, m_twist_frames, m_twist_follow_angles);
