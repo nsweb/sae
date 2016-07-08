@@ -246,8 +246,8 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	ComputeBounds(line_framed.points, merge_dist, bounds);
 	int nb_bounds = bounds.size();
 
-	Array<AttractorMergeInfo> line_merges;
-	line_merges.resize(nb_points);
+	//Array<AttractorMergeInfo> line_merges;
+	//line_merges.resize(nb_points);
 	Array<AttractorSnapRange> snap_ranges;
 
 	const int min_spacing = 3 * SAUtils::points_in_bound;
@@ -267,17 +267,28 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				// potential merge, check whether at least one segment in b1 is near one in b0
 				//ivec2 r_0, r_1;
 				AttractorSnapRange snap_range;
-				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, merge_dist, snap_range/*r_0, r_1, snap_segments*/, line_merges))
+				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, merge_dist, snap_range/*r_0, r_1, snap_segments, line_merges*/))
 				{
 					if (snap_range.src_points.y - snap_range.src_points.x >= min_spacing)	// ignore snap_ranges if they are too short
 					{
-						snap_ranges.push_back(snap_range);
+						// don't snap on an already snapped segment
+						//int snap_idx = 0;
+						//for (; snap_idx < snap_ranges.size(); snap_idx++)
+						//{
+						//	if (!(snap_range.dst_segs.x > snap_ranges[snap_idx].src_points.y || snap_range.dst_segs.y < snap_ranges[snap_idx].src_points.x))
+						//		break;
+						//}
 
-						// ok, merge r_1 points to r_0
-						//SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
+						//if (snap_idx >= snap_ranges.size())
+						{
+							snap_ranges.push_back(snap_range);
 
-						next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
-						break;
+							// ok, merge r_1 points to r_0
+							//SnapRange(line_points, merge_dist, r_0, r_1, snap_segments, line_merges);
+
+							next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
+							break;
+						}
 					}
 				}
 			}
@@ -359,10 +370,11 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			if (snap_idx >= 0 && snap_interp)
 			{
 				int cur_seg_0 = snap_ranges[snap_idx].dst_segs.y;
-				for (int d_idx = 0; d_idx <= lerp_spacing; d_idx++)
+				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
 					int src_idx = start_idx - d_idx;
 					float best_t, ratio_blend = float(d_idx) / float(lerp_spacing);
+					ratio_blend = ratio_blend * ratio_blend * (3.0f - 2.0f * ratio_blend); // smoothstep
 					cur_seg_0 = FindNextBestSnapSeg(line_framed.points, src_idx, cur_seg_0, -1 /*inc*/, 1e8f, best_t);
 					if (cur_seg_0 == INDEX_NONE)
 						break;	// oups, should not happen
@@ -392,6 +404,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				{
 					int src_idx = end_idx + d_idx;
 					float best_t, ratio_blend = float(d_idx) / float(lerp_spacing);
+					ratio_blend = ratio_blend * ratio_blend * (3.0f - 2.0f * ratio_blend); // smoothstep
 					cur_seg_0 = FindNextBestSnapSeg(line_framed.points, src_idx, cur_seg_0, 1 /*inc*/, 1e8f, best_t);
 					if (cur_seg_0 == INDEX_NONE)
 						break;	// oups, should not happen
@@ -413,7 +426,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	}
 }
 
-bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range/*, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments*/, Array<AttractorMergeInfo>& line_merges)
+bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range/*, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges*/)
 {
 	int start_0 = bigball::max( 0, b_idx0 * SAUtils::points_in_bound - 1 );
 	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
@@ -478,11 +491,11 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 		int c_1_next = c_1;
 		while (c_1_next >= 0 && cur_seg_0 != INDEX_NONE)
 		{
-            if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
-            {
-                // reaching an already merged section, abort snapping
-                return false;
-            }
+            //if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
+            //{
+            //    // reaching an already merged section, abort snapping
+            //    return false;
+            //}
 
 			float best_t;
 			cur_seg_0 = FindNextBestSnapSeg(line_points, c_1_next, cur_seg_0, -1 /*inc*/, sq_merge_dist, best_t);
@@ -501,11 +514,11 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 		int c_1_next = c_1;
 		while (c_1_next < nb_points && cur_seg_0 != INDEX_NONE)
 		{
-            if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
-            {
-                // reaching an already merged section, abort snapping
-                return false;
-            }
+            //if (line_merges[c_1_next].merge_parent_idx != INDEX_NONE)
+            //{
+            //    // reaching an already merged section, abort snapping
+            //    return false;
+            //}
 
 			float best_t;
 			cur_seg_0 = FindNextBestSnapSeg(line_points, c_1_next, cur_seg_0, 1 /*inc*/, sq_merge_dist, best_t);
