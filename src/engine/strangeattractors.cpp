@@ -640,13 +640,6 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vx_prev, vy_prev, vz_prev;
     
-    // Compute normal to internal curvature
-    //Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
-    //VX_array.resize( line_points.size() );      // RIGHT  --> FRONT
-    //VY_array.resize( line_points.size() );      // FRONT  --> UP
-    //VZ_array.resize( line_points.size() );      // UP     --> RIGHT
-    //VX_follow_array.resize( line_points.size() );
-
 	Array<vec3> const& line_points = line_framed.points;
 	Array<quat>& frames = line_framed.frames;
 	Array<float>& follow_angles = line_framed.follow_angles;
@@ -673,8 +666,8 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
         
         vec3 V0RightN = cross( V0N, vy );
         vec3 V1RightN = cross( V1N, vy );
-        vec3 vz = normalize( V0RightN + V1RightN );
-        vec3 vx = cross( vy, vz );
+        vec3 vz = normalize( V0RightN + V1RightN ); // right vector
+        vec3 vx = cross( vy, vz );      // front vector
         
         // Replace VX_follow inside VX, VZ frame
         // Remove VY component
@@ -706,61 +699,6 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 	const int32 base_vertex = tri_vertices.size();
 	vec3 P_prev, P_current, P_next, VX_follow;
 
-#if DEAD_CODE
-	// Compute normal to internal curvature
-	Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
-	VX_array.resize( line_points.size() );
-	VY_array.resize( line_points.size() );
-	VZ_array.resize( line_points.size() );
-	VX_follow_array.resize( line_points.size() );
-	for( int32 i=1; i<line_points.size()-1; i++ ) 
-	{
-		P_prev = line_points[i-1];
-		P_current = line_points[i];
-		P_next = line_points[i+1];
-		vec3 V0 = P_current - P_prev;
-		vec3 V1 = P_next - P_current;
-		float V0_len = length(V0);
-		vec3 V0N = V0 / V0_len;
-		vec3 V1N = normalize(V1);
-		vec3 VZ = cross( V1N, V0N );
-		float VZ_len = length(VZ);
-		if (VZ_len > 1e-4)
-			VZ /= VZ_len;
-		else
-			VZ = VX_array[i-1];
-
-		vec3 V0RightN = cross( V0N, VZ );
-		vec3 V1RightN = cross( V1N, VZ );
-		VX_array[i] = V0RightN + V1RightN;
-		VX_array[i] = normalize(VX_array[i]);
-		VZ_array[i] = VZ;
-		VY_array[i] = cross( VZ_array[i], VX_array[i] );
-
-		// Replace VX_follow inside VX, VZ frame
-		// Remove VY component
-		if( i == 1 )
-			VX_follow = VX_array[1];
-
-		float dotY = dot( VY_array[i], VX_follow );
-		if( bigball::abs(dotY) > 0.99f )
-			int32 Break = 0;
-		VX_follow -= VY_array[i] * dotY;
-		VX_follow = normalize( VX_follow );
-		VX_follow_array[i] = VX_follow;
-	}
-	VX_array[0] = VX_array[1];
-	VX_array[line_points.size()-1] = VX_array[line_points.size()-2];
-	VY_array[0] = VY_array[1];
-	VY_array[line_points.size()-1] = VY_array[line_points.size()-2];
-	VZ_array[0] = VZ_array[1];
-	VZ_array[line_points.size()-1] = VZ_array[line_points.size()-2];
-	VX_follow_array[0] = VX_follow_array[1];
-	VX_follow_array[line_points.size()-1] = VX_follow_array[line_points.size()-2];
-
-	Array<vec3> merge_line_points, merge_VX_follow;
-	MergeLinePoints( line_points, VX_follow_array, VX_array, VZ_array, merge_line_points, merge_VX_follow, params );
-#endif // DEAD_CODE
     
 	const int32 num_local_points = local_shape.size();
 	const int32 line_inc = (params.simplify_level > 1 ? params.simplify_level : 1);
@@ -772,7 +710,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		vec3 vx = mat.v0;   // FRONT
         vec3 vy = mat.v1;   // UP
         vec3 vz = mat.v2;   // RIGHT
-		//VX_follow = merge_VX_follow[i];
+
 		P_prev = line_points[i-1];
 		P_current = line_points[i];
 		//P_next = merge_line_points[i+1];
@@ -782,11 +720,8 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		vec3 V0N = V0 / V0_len;
 		vec3 V0RightN = cross( V0N, vy );
 
-
 		// Twist local shape with follow vec inside current frame VX, VY, VZ
-		//float dot_x = dot( VX, VX_follow );
-		//float dot_z = dot( VZ, VX_follow );
-        float delta_angle = follow_angles[i]; // bigball::atan2(dot_z, dot_x);
+        float delta_angle = follow_angles[i];
 		float cf = bigball::cos(delta_angle);
 		float sf = bigball::sin(delta_angle);
 
