@@ -165,7 +165,7 @@ void SAEEditor::DrawFileDialog(eMenuCommandType cmd_type)
 
 	ImGui::PushItemWidth(350);
     int old_sel = m_current_file_selection;
-	if (ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &m_current_file_array, m_current_file_array.size(), 10))
+	if (ImGui::ListBox("", &m_current_file_selection, GetItemStringArray, &m_current_file_array, m_current_file_array.size(), 20))
     {
 		if (m_current_file_selection >= 0 && m_current_file_selection < m_current_file_array.size())
 		{
