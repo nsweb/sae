@@ -237,7 +237,7 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 	}
 }
 
-void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, bool snap_interp, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
 	BB_LOG(SAUtils, Log, "MergeLinePoints\n");
 
@@ -245,7 +245,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	//Array<int> snap_segments;
 	const int nb_points = line_framed.points.size();
     Array<AABB> bounds;
-	ComputeBounds(line_framed.points, merge_dist, bounds);
+	ComputeBounds(line_framed.points, shape_params.merge_dist, bounds);
 	int nb_bounds = bounds.size();
 
 	//Array<AttractorMergeInfo> line_merges;
@@ -270,7 +270,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			{
 				// potential merge, check whether at least one segment in b1 is near one in b0
 				AttractorSnapRange snap_range;
-				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, merge_dist, snap_range))
+				if (FindSnapRange(line_framed.points, b_idx0, b_idx1, shape_params.merge_dist, snap_range))
 				{
 					if (snap_range.src_points.y - snap_range.src_points.x >= min_spacing)	// ignore snap_ranges if they are too short
 					{
@@ -339,10 +339,12 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			snapped_lines.push_back(new_framed);
 			AttractorLineFramed& ref_framed = snapped_lines.Last();
 
+			int cur_seg_0 = INDEX_NONE;
 			const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
-			if (snap_idx >= 0 && snap_interp)
+			if (snap_idx >= 0 && shape_params.snap_interp)
 			{
-				int cur_seg_0 = snap_ranges[snap_idx].dst_segs.y;
+                // from snapped to not snapped
+				cur_seg_0 = snap_ranges[snap_idx].dst_segs.y;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
 					int src_idx = start_idx - d_idx;
@@ -356,10 +358,43 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 					vec3 dst_pos = line_framed.points[cur_seg_0] * (1.f - best_t) + line_framed.points[cur_seg_0 + 1] * best_t;
 					vec3 delta_pos = dst_pos - src_pos;
 					vec3 p = src_pos + delta_pos * ratio_blend;
+                    
 					ref_framed.points.insert(p,0);
 					ref_framed.frames.insert(line_framed.frames[src_idx],0);
 					ref_framed.follow_angles.insert(line_framed.follow_angles[src_idx],0);
 				}
+    
+                
+                /*if (cur_seg_0 != INDEX_NONE)
+                {
+                    quat end_frame = line_framed.frames[start_idx];
+                    float end_angle = line_framed.follow_angles[start_idx];
+                    quat end_rot_frame(quat::fromeuler_xyz(end_angle, 0.f, 0.f));
+                    end_frame = end_frame * end_rot_frame;
+                    
+                    quat start_frame = line_framed.frames[cur_seg_0];
+                    float start_angle = line_framed.follow_angles[cur_seg_0];
+                    
+                    // find shortest rotation arc
+                    float max_cos = -FLT_MAX;
+                    quat best_start_frame = start_frame;
+                    for (int la = 0; la < 5; la++)
+                    {
+                        quat try_rot_frame(quat::fromeuler_xyz(end_angle + (la * F_PI * 2.f / 5), 0.f, 0.f));
+                        quat try_start_frame = start_frame * try_rot_frame;
+                        
+                        quat inv_end_frame = ~end_frame;
+                        quat delta_rotation = inv_end_frame * try_start_frame;
+                        if (delta_rotation.w > max_cos )
+                        {
+                            max_cos = delta_rotation.w;
+                            best_start_frame = try_start_frame;
+                        }
+
+                        lerp( best_start_frame, end_frame, 0.5f);
+                    }
+                }*/
+                
 			}
 
 			// copy
@@ -369,8 +404,19 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				ref_framed.frames.push_back(line_framed.frames[idx]);
 				ref_framed.follow_angles.push_back(line_framed.follow_angles[idx]);
 			}
+            
+			if (cur_seg_0 != INDEX_NONE)
+            {
+				quat src_frame = line_framed.frames[cur_seg_0];
+				float src_follow_angle = line_framed.follow_angles[cur_seg_0];
+				quat dst_frame = line_framed.frames[start_idx];
+				float dst_follow_angle = line_framed.follow_angles[start_idx];
+				FindNearestFollowDestAngle(src_frame, src_follow_angle, dst_frame, dst_follow_angle, shape_params.local_edge_count);
 
-			if (snap_idx < nb_range - 1 && snap_interp)
+                GenerateFrames(ref_framed, 0, lerp_spacing - 1, false, true /*use continuity from last copy*/);
+            }
+
+			if (snap_idx < nb_range - 1 && shape_params.snap_interp)
 			{
 				int cur_seg_0 = snap_ranges[snap_idx + 1].dst_segs.x;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
@@ -390,6 +436,8 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 					ref_framed.frames.push_back(line_framed.frames[src_idx]);
 					ref_framed.follow_angles.push_back(line_framed.follow_angles[src_idx]);
 				}
+                
+                GenerateFrames(ref_framed, ref_framed.points.size() - 1 - lerp_spacing, ref_framed.points.size() - 1, true /*use continuity from last copy*/, false);
 			}
 		}
 	}
@@ -640,13 +688,6 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vx_prev, vy_prev, vz_prev;
     
-    // Compute normal to internal curvature
-    //Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
-    //VX_array.resize( line_points.size() );      // RIGHT  --> FRONT
-    //VY_array.resize( line_points.size() );      // FRONT  --> UP
-    //VZ_array.resize( line_points.size() );      // UP     --> RIGHT
-    //VX_follow_array.resize( line_points.size() );
-
 	Array<vec3> const& line_points = line_framed.points;
 	Array<quat>& frames = line_framed.frames;
 	Array<float>& follow_angles = line_framed.follow_angles;
@@ -673,8 +714,8 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
         
         vec3 V0RightN = cross( V0N, vy );
         vec3 V1RightN = cross( V1N, vy );
-        vec3 vz = normalize( V0RightN + V1RightN );
-        vec3 vx = cross( vy, vz );
+        vec3 vz = normalize( V0RightN + V1RightN ); // right vector
+        vec3 vx = cross( vy, vz );      // front vector
         
         // Replace VX_follow inside VX, VZ frame
         // Remove VY component
@@ -701,66 +742,71 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
 }
 
+void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity)
+{
+    vec3 P_prev, P_current, P_next, vz_follow;
+    vec3 vx_prev, vy_prev, vz_prev;
+    
+    Array<vec3> const& line_points = line_framed.points;
+    Array<quat>& frames = line_framed.frames;
+    Array<float>& follow_angles = line_framed.follow_angles;
+    
+    int start_idx = (start_continuity ? from_idx : from_idx + 1);
+    int end_idx = (end_continuity ? to_idx : to_idx - 1);
+    for( int32 i = start_idx; i <= end_idx; i++ )
+    {
+        P_prev = line_points[i-1];
+        P_current = line_points[i];
+        P_next = line_points[i+1];
+        vec3 V0 = P_current - P_prev;
+        vec3 V1 = P_next - P_current;
+        float V0_len = length(V0);
+        vec3 V0N = V0 / V0_len;
+        vec3 V1N = normalize(V1);
+        vec3 vy = cross( V1N, V0N );    // up vector
+        float vy_len = length(vy);
+        if (vy_len > 1e-4)
+            vy /= vy_len;
+        else
+            vy = vy_prev;
+        
+        vec3 V0RightN = cross( V0N, vy );
+        vec3 V1RightN = cross( V1N, vy );
+        vec3 vz = normalize( V0RightN + V1RightN ); // right vector
+        vec3 vx = cross( vy, vz );      // front vector
+        
+        // Replace VX_follow inside VX, VZ frame
+        // Remove VY component
+        if( i == 1 )
+            vz_follow = vz;
+        
+        float dotX = dot( vx, vz_follow );
+        if( bigball::abs(dotX) > 0.99f )
+            int32 Break = 0;
+        vz_follow -= vx * dotX;
+        vz_follow = normalize( vz_follow );
+        
+        frames[i] = mat3( vx, vy, vz );
+        
+        float dot_y = dot( vy, vz_follow );
+        float dot_z = dot( vz, vz_follow );
+        float delta_angle = bigball::atan2(dot_y, dot_z);
+        follow_angles[i] = delta_angle;
+    }
+    if (!start_continuity)
+        frames[from_idx] = frames[from_idx + 1];
+    if (!end_continuity)
+        frames[to_idx] = frames[to_idx - 1];
+    //follow_angles[0] = follow_angles[1];
+    //follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
+    
+}
+
 void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params)
 {
 	const int32 base_vertex = tri_vertices.size();
 	vec3 P_prev, P_current, P_next, VX_follow;
 
-#if DEAD_CODE
-	// Compute normal to internal curvature
-	Array<vec3> VX_array, VY_array, VZ_array, VX_follow_array;
-	VX_array.resize( line_points.size() );
-	VY_array.resize( line_points.size() );
-	VZ_array.resize( line_points.size() );
-	VX_follow_array.resize( line_points.size() );
-	for( int32 i=1; i<line_points.size()-1; i++ ) 
-	{
-		P_prev = line_points[i-1];
-		P_current = line_points[i];
-		P_next = line_points[i+1];
-		vec3 V0 = P_current - P_prev;
-		vec3 V1 = P_next - P_current;
-		float V0_len = length(V0);
-		vec3 V0N = V0 / V0_len;
-		vec3 V1N = normalize(V1);
-		vec3 VZ = cross( V1N, V0N );
-		float VZ_len = length(VZ);
-		if (VZ_len > 1e-4)
-			VZ /= VZ_len;
-		else
-			VZ = VX_array[i-1];
-
-		vec3 V0RightN = cross( V0N, VZ );
-		vec3 V1RightN = cross( V1N, VZ );
-		VX_array[i] = V0RightN + V1RightN;
-		VX_array[i] = normalize(VX_array[i]);
-		VZ_array[i] = VZ;
-		VY_array[i] = cross( VZ_array[i], VX_array[i] );
-
-		// Replace VX_follow inside VX, VZ frame
-		// Remove VY component
-		if( i == 1 )
-			VX_follow = VX_array[1];
-
-		float dotY = dot( VY_array[i], VX_follow );
-		if( bigball::abs(dotY) > 0.99f )
-			int32 Break = 0;
-		VX_follow -= VY_array[i] * dotY;
-		VX_follow = normalize( VX_follow );
-		VX_follow_array[i] = VX_follow;
-	}
-	VX_array[0] = VX_array[1];
-	VX_array[line_points.size()-1] = VX_array[line_points.size()-2];
-	VY_array[0] = VY_array[1];
-	VY_array[line_points.size()-1] = VY_array[line_points.size()-2];
-	VZ_array[0] = VZ_array[1];
-	VZ_array[line_points.size()-1] = VZ_array[line_points.size()-2];
-	VX_follow_array[0] = VX_follow_array[1];
-	VX_follow_array[line_points.size()-1] = VX_follow_array[line_points.size()-2];
-
-	Array<vec3> merge_line_points, merge_VX_follow;
-	MergeLinePoints( line_points, VX_follow_array, VX_array, VZ_array, merge_line_points, merge_VX_follow, params );
-#endif // DEAD_CODE
     
 	const int32 num_local_points = local_shape.size();
 	const int32 line_inc = (params.simplify_level > 1 ? params.simplify_level : 1);
@@ -772,7 +818,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		vec3 vx = mat.v0;   // FRONT
         vec3 vy = mat.v1;   // UP
         vec3 vz = mat.v2;   // RIGHT
-		//VX_follow = merge_VX_follow[i];
+
 		P_prev = line_points[i-1];
 		P_current = line_points[i];
 		//P_next = merge_line_points[i+1];
@@ -782,11 +828,8 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		vec3 V0N = V0 / V0_len;
 		vec3 V0RightN = cross( V0N, vy );
 
-
 		// Twist local shape with follow vec inside current frame VX, VY, VZ
-		//float dot_x = dot( VX, VX_follow );
-		//float dot_z = dot( VZ, VX_follow );
-        float delta_angle = follow_angles[i]; // bigball::atan2(dot_z, dot_x);
+        float delta_angle = follow_angles[i];
 		float cf = bigball::cos(delta_angle);
 		float sf = bigball::sin(delta_angle);
 
@@ -1106,7 +1149,7 @@ int32 SAUtils::FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx,
 	return Neighbour;
 }
 
-vec3 SAUtils::FindNearestFollowVector( const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 nLocalEdge )
+vec3 SAUtils::FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count)
 {
 	vec3 VY = cross( NeighbourVZ, NeighbourVX );
 	vec3 LeftFollow = cross( NeighbourFollow, VY );
@@ -1115,9 +1158,9 @@ vec3 SAUtils::FindNearestFollowVector( const vec3& FromV, const vec3& NeighbourF
 	float BestDot = -FLT_MAX;
 	vec3 BestFollow = NeighbourFollow;
     vec3 new_follow;
-	for( int32 i = 0; i < nLocalEdge; ++i )
+	for (int32 i = 0; i < local_edge_count; ++i)
 	{
-		float Angle = 2.0f * F_PI * (float)i / (float)(nLocalEdge);
+		float Angle = 2.0f * F_PI * (float)i / (float)(local_edge_count);
 		float cf = bigball::cos( Angle );
 		float sf = bigball::sin( Angle );
         new_follow = NeighbourFollow * cf + LeftFollow * sf;
@@ -1130,6 +1173,27 @@ vec3 SAUtils::FindNearestFollowVector( const vec3& FromV, const vec3& NeighbourF
 	}
 
 	return BestFollow;
+}
+
+float SAUtils::FindNearestFollowDestAngle(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count)
+{
+	mat3 src_mat(src_frame);
+	vec3 vx = src_mat.v0;   // FRONT
+	vec3 vy = src_mat.v1;   // UP
+	vec3 vz = src_mat.v2;   // RIGHT
+
+	float cf = bigball::cos(src_follow_angle);
+	float sf = bigball::sin(src_follow_angle);
+
+	//float cos_alpha = dot(V0RightN, vz);
+	//float scale = 1.0f / cos_alpha;
+	//for (int32 j = 0; j < num_local_points; ++j)
+	//{
+	//	float local_z = local_shape[j].x * cf - local_shape[j].z * sf;
+	//	float local_y = local_shape[j].x * sf + local_shape[j].z * cf;
+	//	rotated_shape[j] = P_current + vz * (local_z * (scale * params.fatness_scale)) + vx * (local_shape[j].y * params.fatness_scale) + vy * (local_y * params.fatness_scale);
+	//}
+	return 0.f;
 }
 
 void SAUtils::MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& VX_follow_array, const Array<vec3>& VX_array, const Array<vec3>& VZ_array, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params )

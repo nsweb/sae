@@ -513,8 +513,9 @@ namespace SAUtils
 	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
+    void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity);
 	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
-	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, float merge_dist, bool snap_interp, Array<AttractorLineFramed>& snapped_lines);
+	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
@@ -523,7 +524,8 @@ namespace SAUtils
 	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( const char* FileName, Array<vec3>& vPos, Array<int32>& vTriIdx );
 
-	vec3		FindNearestFollowVector( const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 nLocalEdge );
+	vec3		FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count);
+	float		FindNearestFollowDestAngle(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );
 	void		MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );
 
