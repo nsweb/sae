@@ -735,9 +735,9 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
 	if (constrained_angles)
 	{
 		if (delta_angle > F_PI)
-			delta_angle -= F_2_PI;
+			delta_angle = 2.f * F_PI - delta_angle;
 		else if (delta_angle < -F_PI)
-			delta_angle += F_2_PI;
+			delta_angle = -delta_angle - 2.f * F_PI;
 	}
 
     for( int32 i = start_idx; i <= end_idx; i++ )
@@ -1189,7 +1189,7 @@ float SAUtils::FindNearestFollowDestAngle(quat const& src_frame, float src_follo
 	float best_dot = -FLT_MAX;
 	for (int32 i = 0; i < local_edge_count; ++i)
 	{
-		float dst_angle = dst_follow_angle + 2.0f * F_PI * (float)i / (float)(local_edge_count);
+		float dst_angle = dst_follow_angle + 2.0f * F_PI * (float)(i) / (float)(local_edge_count);
 		float cf = bigball::cos(dst_angle);
 		float sf = bigball::sin(dst_angle);
 		vec3 new_follow = dst_vz * cf + dst_vy * sf;
