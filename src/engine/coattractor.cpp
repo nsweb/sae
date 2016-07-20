@@ -105,6 +105,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 
 		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_framed.points);
 		SAUtils::GenerateFrames(m_line_framed);
+		m_line_framed.SetDefaultRanges();
 		if (!keep_handle)
 			cohandle->m_handles.clear();
         line_changed = true;
@@ -134,6 +135,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 
         m_tri_vertices.clear();
         m_tri_normals.clear();
+		m_tri_colors.clear();
         m_tri_indices.clear();
 
         m_shape_params.weld_vertex = false;
@@ -148,7 +150,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 		//SAUtils::TwistLinePoints(m_line_points, m_frames, m_follow_angles, cohandle->m_handles, m_twist_line_points, m_twist_frames, m_twist_follow_angles);
 		// Generate mesh from twisted line
 		//SAUtils::GenerateSolidMesh(m_twist_line_points, m_twist_frames, m_twist_follow_angles, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
-		SAUtils::GenerateSolidMesh(m_snapped_lines, m_shape_params, m_tri_vertices, &m_tri_normals, m_tri_indices);
+		SAUtils::GenerateSolidMesh(m_snapped_lines, m_shape_params, m_tri_vertices, &m_tri_normals, &m_tri_colors, m_tri_indices);
 	}
     
     vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
@@ -205,6 +207,7 @@ void CoAttractor::UpdateVertexBuffers()
 	glBindVertexArray(m_varrays[eVAMesh]);
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBMeshElt]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_tri_indices.size() * sizeof(int32), m_tri_indices.Data(), GL_STATIC_DRAW);
 
@@ -216,9 +219,14 @@ void CoAttractor::UpdateVertexBuffers()
 	glBufferData(GL_ARRAY_BUFFER, m_tri_normals.size() * sizeof(vec3), m_tri_normals.Data(), GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vec3) /*stride*/, (void*)0 /*offset*/);
 
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBMeshColors]);
+	glBufferData(GL_ARRAY_BUFFER, m_tri_colors.size() * sizeof(float), m_tri_colors.Data(), GL_STATIC_DRAW);
+	glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(float) /*stride*/, (void*)0 /*offset*/);
+
 	glBindVertexArray(0);
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
 }
 
 void CoAttractor::RemoveFromWorld()

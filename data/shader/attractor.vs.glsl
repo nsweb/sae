@@ -10,7 +10,7 @@
 
 layout (location = 0) in vec4 position;
 layout (location = 1) in vec3 normal;
-//layout (location = 2) in mat4 world_mat;
+layout (location = 2) in float color;
 
 out vec3 vs_fs_normal;
 out vec4 vs_fs_color;
@@ -30,6 +30,11 @@ void main(void)
 	}
 	else
 	{
-		vs_fs_color = vec4(1., 1., 1., color_info.z);
+		vec3 rgb_col = vec3(1., 1., 1.);
+		if( color < 0. )
+			rgb_col = mix( vec3(1., 1., 1.), vec3(1., 0., 0.), 1. - color );
+		else if( color > 0. )
+			rgb_col = mix( vec3(1., 1., 1.), vec3(0., 0., 1.), color );
+		vs_fs_color = vec4( rgb_col, color_info.z);
 	}
 }

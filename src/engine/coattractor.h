@@ -63,6 +63,7 @@ public:
 	// 
     Array<vec3>             m_tri_vertices;
 	Array<vec3>             m_tri_normals;
+	Array<float>            m_tri_colors;
     Array<int32>            m_tri_indices;
     vec3                    m_min_box;
     vec3                    m_max_box;
@@ -86,6 +87,7 @@ public:
 		eVBLinePoints = 0,   
 		eVBMesh,
 		eVBMeshNormals,
+		eVBMeshColors,
 		eVBMeshElt,
 		eVBCount
 	};

@@ -365,6 +365,9 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				} 
 			}
 
+			ref_framed.snap_ranges.x = 0;
+			ref_framed.snap_ranges.y = ref_framed.points.size();
+
 			// copy
 			for (int idx = start_idx; idx <= end_idx; idx++)
 			{
@@ -372,7 +375,8 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				ref_framed.frames.push_back(line_framed.frames[idx]);
 				ref_framed.follow_angles.push_back(line_framed.follow_angles[idx]);
 			}
-            
+			ref_framed.snap_ranges.z = ref_framed.points.size();
+
 			if (cur_seg_0 != INDEX_NONE)
             {
 				quat src_frame = line_framed.frames[cur_seg_0];
@@ -387,6 +391,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			if (snap_idx < nb_range - 1 && shape_params.snap_interp)
 			{
 				// from not snapped to snapped
+				int prev_size = ref_framed.points.size();
 				int cur_seg_0 = snap_ranges[snap_idx + 1].dst_segs.x;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
@@ -417,6 +422,8 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 					GenerateFrames(ref_framed, ref_framed.points.size() - 1 - lerp_spacing, ref_framed.points.size() - 1, true /*use continuity from last copy*/, false, src_follow_angle, dst_follow_angle_fixed);
 				}
 			}
+
+			ref_framed.snap_ranges.w = ref_framed.points.size();
 		}
 	}
 	else
@@ -578,7 +585,7 @@ int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, i
 //	}
 //}
 
-void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
+void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/)
 {
 	Array<vec3> local_shape;
 	GenerateLocalShape(local_shape, params);
@@ -589,7 +596,7 @@ void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines,
 		AttractorLineFramed const & line_framed = snapped_lines[line_idx];
 
 		int32 base_vertex = tri_vertices.size();
-		GenerateTriVertices(tri_vertices, tri_normals, local_shape, line_framed.points, line_framed.frames, line_framed.follow_angles, params);
+		GenerateTriVertices(tri_vertices, tri_normals, tri_colors, local_shape, line_framed, params);
 
 		GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
 	}
@@ -798,12 +805,15 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
     
 }
 
-void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params)
+void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, const AttractorShapeParams& params)
 {
+	const Array<vec3>& line_points = line_framed.points;
+	const Array<quat>& frames = line_framed.frames;
+	const Array<float>& follow_angles = line_framed.follow_angles;
+
 	const int32 base_vertex = tri_vertices.size();
 	vec3 P_prev, P_current, P_next, VX_follow;
 
-    
 	const int32 num_local_points = local_shape.size();
 	const int32 line_inc = (params.simplify_level > 1 ? params.simplify_level : 1);
 	Array<vec3> rotated_shape;
@@ -814,6 +824,12 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		vec3 vx = mat.v0;   // FRONT
         vec3 vy = mat.v1;   // UP
         vec3 vz = mat.v2;   // RIGHT
+
+		float color = 0.f;
+		if (i < line_framed.snap_ranges.y) // snap out
+			color = lerp(-1.f, 0.f, float(i - line_framed.snap_ranges.x) / float(line_framed.snap_ranges.y - line_framed.snap_ranges.x));
+		else if (i >= line_framed.snap_ranges.z) // snap in
+			color = lerp(0.f, 1.f, float(i - line_framed.snap_ranges.z) / float(line_framed.snap_ranges.w - line_framed.snap_ranges.z));
 
 		P_prev = line_points[i-1];
 		P_current = line_points[i];
@@ -856,6 +872,11 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 					tri_normals->push_back(normal_prev);
 					tri_normals->push_back(normal_next);
 				}
+				if (tri_colors)
+				{
+					tri_colors->push_back(color);
+					tri_colors->push_back(color);
+				}
 			}
 			else
 			{
@@ -864,6 +885,10 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 				{ 
 					vec3 normal_P = normalize(P_shape - P_current);
 					tri_normals->push_back(normal_P);
+				}
+				if (tri_colors)
+				{
+					tri_colors->push_back(color);
 				}
 			}
 		}
@@ -877,6 +902,9 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 	vec3 start_normal = normalize(line_points[0] - line_points[1]);
 	if (tri_normals)
 		tri_normals->push_back(start_normal);
+	if (tri_colors)
+		tri_colors->push_back(-1.f);
+	
 	if( !params.weld_vertex )
 	{
 		// Push start vertices
@@ -887,13 +915,20 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		{ 
 			for (int32 j = 0; j < num_local_points; ++j)
 				tri_normals->push_back(start_normal);
-		}	
+		}
+		if (tri_colors)
+		{
+			for (int32 j = 0; j < num_local_points; ++j)
+				tri_colors->push_back(-1.f);
+		}
 	}
 
 	tri_vertices.push_back(line_points[line_points.size() - 2]);
 	vec3 end_normal = normalize(line_points[line_points.size() - 1] - line_points[line_points.size() - 2]);
 	if (tri_normals)
 		tri_normals->push_back(end_normal);
+	if (tri_colors)
+		tri_colors->push_back(1.f);
 	if( !params.weld_vertex )
 	{
 		// Push end vertices
@@ -904,6 +939,11 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
 		{
 			for (int32 j = 0; j < num_local_points; ++j)
 				tri_normals->push_back(end_normal);
+		}
+		if (tri_colors)
+		{
+			for (int32 j = 0; j < num_local_points; ++j)
+				tri_colors->push_back(1.f);
 		}
 	}
 }

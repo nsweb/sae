@@ -493,11 +493,17 @@ struct AttractorLineFramed
 		points.clear();
 		frames.clear();
 		follow_angles.clear();
+		snap_ranges = ivec4(INDEX_NONE, INDEX_NONE, INDEX_NONE, INDEX_NONE);
+	}
+	void SetDefaultRanges()
+	{
+		snap_ranges = ivec4(0, 0, points.size(), points.size());
 	}
 
 	Array<vec3>		points;
 	Array<quat>		frames;
 	Array<float>    follow_angles;
+	ivec4			snap_ranges;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -510,7 +516,7 @@ namespace SAUtils
 	//void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
 	//void		ComputeStrangeAttractorCurl();
 	//void		ComputeStrangeAttractorGradient();
-	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
+	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/);
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, float start_angle = -FLT_MAX, float end_angle = -FLT_MAX);
@@ -519,7 +525,7 @@ namespace SAUtils
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
-	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, const Array<vec3>& local_shape, const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const AttractorShapeParams& params);
+	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, /*const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles,*/ const AttractorShapeParams& params);
 
 	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( const char* FileName, Array<vec3>& vPos, Array<int32>& vTriIdx );
