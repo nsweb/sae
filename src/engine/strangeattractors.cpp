@@ -343,7 +343,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
 			if (snap_idx >= 0 && shape_params.snap_interp)
 			{
-                // from snapped to not snapped
+                // from snapped to unsnapped (i.e. from unplugged to plugged)
 				cur_seg_0 = snap_ranges[snap_idx].dst_segs.y;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
@@ -383,14 +383,15 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				float src_follow_angle = line_framed.follow_angles[cur_seg_0];
 				quat dst_frame = line_framed.frames[start_idx];
 				float dst_follow_angle = line_framed.follow_angles[start_idx];
-				float dst_follow_angle_fixed = FindNearestFollowDestAngle(src_frame, src_follow_angle, dst_frame, dst_follow_angle, shape_params.local_edge_count);
+                vec3 src_follow, dst_follow;
+				FindNearestFollowVector(dst_frame, dst_follow_angle, src_frame, src_follow_angle, shape_params.local_edge_count, dst_follow, src_follow);
 
-				GenerateFrames(ref_framed, 0, lerp_spacing - 1, false, true /*use continuity from last copy*/, src_follow_angle, dst_follow_angle_fixed);
+				GenerateFrames(ref_framed, 0, lerp_spacing - 1, false, true /*use continuity from last copy*/, &src_follow, &dst_follow);
             }
 
 			if (snap_idx < nb_range - 1 && shape_params.snap_interp)
 			{
-				// from not snapped to snapped
+				// from unsnapped to snapped (i.e. from plugged to unplugged)
 				int prev_size = ref_framed.points.size();
 				int cur_seg_0 = snap_ranges[snap_idx + 1].dst_segs.x;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
@@ -417,9 +418,10 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 					float src_follow_angle = line_framed.follow_angles[end_idx];
 					quat dst_frame = line_framed.frames[cur_seg_0];
 					float dst_follow_angle = line_framed.follow_angles[cur_seg_0];
-					float dst_follow_angle_fixed = FindNearestFollowDestAngle(src_frame, src_follow_angle, dst_frame, dst_follow_angle, shape_params.local_edge_count);
+                    vec3 src_follow, dst_follow;
+					FindNearestFollowVector(src_frame, src_follow_angle, dst_frame, dst_follow_angle, shape_params.local_edge_count, src_follow, dst_follow);
 
-					GenerateFrames(ref_framed, ref_framed.points.size() - 1 - lerp_spacing, ref_framed.points.size() - 1, true /*use continuity from last copy*/, false, src_follow_angle, dst_follow_angle_fixed);
+					GenerateFrames(ref_framed, ref_framed.points.size() - 1 - lerp_spacing, ref_framed.points.size() - 1, true /*use continuity from last copy*/, false, &src_follow, &dst_follow);
 				}
 			}
 
@@ -726,7 +728,15 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
 }
 
-void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, float start_angle, float end_angle)
+/*FQuat FQuat::FastLerp( const FQuat& A, const FQuat& B, const float Alpha )
+{
+    // To ensure the 'shortest route', we make sure the dot product between the both rotations is positive.
+    const float DotResult = (A | B);
+    const float Bias = FMath::FloatSelect(DotResult, 1.0f, -1.0f);
+    return (B * Alpha) + (A * (Bias * (1.f - Alpha)));
+}*/
+
+void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector, vec3* end_vector)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vx_prev, vy_prev, vz_prev;
@@ -737,15 +747,20 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
     
     int start_idx = (start_continuity ? from_idx : from_idx + 1);
     int end_idx = (end_continuity ? to_idx : to_idx - 1);
-	bool constrained_angles = (start_angle != -FLT_MAX && end_angle != -FLT_MAX) ? true : false;
-	float delta_angle = end_angle - start_angle;
-	if (constrained_angles)
-	{
-		if (delta_angle > F_PI)
-			delta_angle = 2.f * F_PI - delta_angle;
-		else if (delta_angle < -F_PI)
-			delta_angle = -delta_angle - 2.f * F_PI;
-	}
+	quat delta_rot(1.f);
+    bool constrained_angles = (start_vector != nullptr && end_vector != nullptr) ? true : false;
+    if (constrained_angles)
+        delta_rot = quat::rotate(*start_vector, *end_vector);
+
+    
+    //float delta_angle = end_angle - start_angle;
+	//if (constrained_angles)
+	//{
+	//	if (delta_angle > F_PI)
+	//		delta_angle = 2.f * F_PI - delta_angle;
+	//	else if (delta_angle < -F_PI)
+	//		delta_angle = -delta_angle - 2.f * F_PI;
+	//}
 
     for( int32 i = start_idx; i <= end_idx; i++ )
     {
@@ -774,8 +789,13 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
 		{
 			// Simply interpolate between requested angles
 			float ratio = float(i - start_idx) / float(end_idx - start_idx);
-			float angle = start_angle + delta_angle * ratio;
-			follow_angles[i] = angle;
+            quat ratio_quat = lerp( quat(1.f), delta_rot, ratio );
+            ratio_quat = normalize(ratio_quat);
+            vz_follow = ratio_quat.transform(*start_vector);
+    
+            
+			//float angle = start_angle + delta_angle * ratio;
+			//follow_angles[i] = angle;
 		}
 		else
 		{
@@ -783,18 +803,18 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
 			// Remove VY component
 			if (i == start_idx)
 				vz_follow = vz;
+        }
 
-			float dotX = dot(vx, vz_follow);
-			if (bigball::abs(dotX) > 0.99f)
-				int32 Break = 0;
-			vz_follow -= vx * dotX;
-			vz_follow = normalize(vz_follow);
+        float dotX = dot(vx, vz_follow);
+        if (bigball::abs(dotX) > 0.99f)
+            int32 Break = 0;
+        vz_follow -= vx * dotX;
+        vz_follow = normalize(vz_follow);
 
-			float dot_y = dot(vy, vz_follow);
-			float dot_z = dot(vz, vz_follow);
-			float delta_angle = bigball::atan2(dot_y, dot_z);
-			follow_angles[i] = delta_angle;
-		}
+        float dot_y = dot(vy, vz_follow);
+        float dot_z = dot(vz, vz_follow);
+        float delta_angle = bigball::atan2(dot_y, dot_z);
+        follow_angles[i] = delta_angle;
     }
     if (!start_continuity)
         frames[from_idx] = frames[from_idx + 1];
@@ -1185,7 +1205,7 @@ int32 SAUtils::FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx,
 	return Neighbour;
 }
 
-vec3 SAUtils::FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count)
+/*vec3 SAUtils::FindNearestFollowVector(const vec3& ref_follow, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count)
 {
 	vec3 VY = cross( NeighbourVZ, NeighbourVX );
 	vec3 LeftFollow = cross( NeighbourFollow, VY );
@@ -1199,7 +1219,7 @@ vec3 SAUtils::FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFo
 		float cf = bigball::cos( angle );
 		float sf = bigball::sin( angle );
 		vec3 new_follow = NeighbourFollow * cf + LeftFollow * sf;
-		float dot_follow = dot( new_follow, FromV );
+		float dot_follow = dot( new_follow, ref_follow );
 		if (dot_follow > best_dot)
 		{
 			best_dot = dot_follow;
@@ -1208,9 +1228,9 @@ vec3 SAUtils::FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFo
 	}
 
 	return best_follow;
-}
+}*/
 
-float SAUtils::FindNearestFollowDestAngle(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count)
+void SAUtils::FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow)
 {
 	mat3 src_mat(src_frame);
 	vec3 src_vx = src_mat.v0;   // FRONT
@@ -1218,14 +1238,14 @@ float SAUtils::FindNearestFollowDestAngle(quat const& src_frame, float src_follo
 	vec3 src_vz = src_mat.v2;   // RIGHT
 	float src_cf = bigball::cos(src_follow_angle);
 	float src_sf = bigball::sin(src_follow_angle);
-	vec3 src_follow = src_vz * src_cf + src_vy * src_sf;
+    src_follow = src_vz * src_cf + src_vy * src_sf;
 
 	mat3 dst_mat(dst_frame);
 	vec3 dst_vx = dst_mat.v0;   // FRONT
 	vec3 dst_vy = dst_mat.v1;   // UP
 	vec3 dst_vz = dst_mat.v2;   // RIGHT
 
-	float best_angle = dst_follow_angle;
+	dst_follow = vec3(0.f,0.f,0.f);
 	float best_dot = -FLT_MAX;
 	for (int32 i = 0; i < local_edge_count; ++i)
 	{
@@ -1237,15 +1257,15 @@ float SAUtils::FindNearestFollowDestAngle(quat const& src_frame, float src_follo
 		if (dot_follow > best_dot)
 		{
 			best_dot = dot_follow;
-			best_angle = dst_angle;
+			dst_follow = new_follow;
 		}
 	}
 
 	// ensure dst_angle is in [-PI, PI] range
-	if (best_angle > F_PI)
-		best_angle -= F_PI;
+	//if (best_angle > F_PI)
+	//	best_angle -= F_PI;
 
-	return best_angle;
+	//return best_angle;
 }
 
 void SAUtils::MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& VX_follow_array, const Array<vec3>& VX_array, const Array<vec3>& VZ_array, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params )
