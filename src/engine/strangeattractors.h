@@ -514,8 +514,6 @@ namespace SAUtils
 
 	void		ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
 	//void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
-	//void		ComputeStrangeAttractorCurl();
-	//void		ComputeStrangeAttractorGradient();
 	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/);
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
@@ -530,7 +528,6 @@ namespace SAUtils
 	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( const char* FileName, Array<vec3>& vPos, Array<int32>& vTriIdx );
 
-	//vec3		FindNearestFollowVector(const vec3& FromV, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count);
 	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );
 	void		MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );

@@ -5,95 +5,6 @@
 #include "math/intersections.h"
 
 
-//void SAUtils::ComputeStrangeAttractorGradient()
-//{
-//	AttractorShape S0;
-//	Array<AttractorShape> init_shapes;
-//
-//	AizawaAttractor att0;
-//	S0.attractor = &att0;
-//
-//	AttractorShapeParams params;
-//	Array<vec3> local_shape;
-//	GenerateLocalShape( local_shape, params );
-//	const int32 num_local_points = local_shape.size();
-//
-//	S0.attractor->Loop(S0.line_points, 3000);
-//
-//	init_shapes.resize( S0.line_points.size() / 10 );
-//    
-//    Array<quat> frames;
-//    Array<float> follow_angles;
-//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-//	{	
-//		AttractorShape& S = init_shapes[ShapeIdx];
-//		S.attractor = &att0;
-//		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-//		S.attractor->LoopGradient(S.line_points, 200);
-//        
-//        GenerateFrames(S.line_points, frames, follow_angles);
-//
-//		// Generate shapes
-//		params.fatness_scale = S.attractor->m_fatness_scale;
-//		params.weld_vertex = true;
-//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-//	}
-//
-//	// Generate tri index
-//	GenerateTriIndices( init_shapes, num_local_points );
-//
-//	std::string filename = "StrangeAttractor_";
-//	filename += att0.GetClassName();
-//	filename += "_gradient.obj";
-//	WriteObjFile( filename.c_str(), init_shapes );
-//}
-//
-//void SAUtils::ComputeStrangeAttractorCurl()
-//{
-//	AttractorShape S0;
-//	Array<AttractorShape> init_shapes;
-//
-//	//AizawaAttractor att0;
-//	//att0.m_init_point = vec3( 0.1f, 0, 0 );
-//
-//	LorenzAttractor att0;
-//	S0.attractor = &att0;
-//
-//	AttractorShapeParams params;
-//	Array<vec3> local_shape;
-//	GenerateLocalShape( local_shape, params );
-//	const int32 num_local_points = local_shape.size();
-//
-//	S0.attractor->Loop(S0.line_points, 2000);
-//
-//	init_shapes.resize( S0.line_points.size() / 10 );
-//    
-//    Array<quat> frames;
-//    Array<float> follow_angles;
-//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-//	{	
-//		AttractorShape& S = init_shapes[ShapeIdx];
-//		S.attractor = &att0;
-//		S.attractor->m_init_point = S0.line_points[10*ShapeIdx];
-//		S.attractor->LoopCurl( S.line_points, 200 );
-//        
-//        GenerateFrames(S.line_points, frames, follow_angles);
-//
-//		// Generate shapes
-//		params.fatness_scale = S.attractor->m_fatness_scale;
-//		params.weld_vertex = true;
-//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-//	}
-//
-//	// Generate tri index
-//	GenerateTriIndices( init_shapes, num_local_points );
-//
-//	std::string filename = "StrangeAttractor_";
-//	filename += att0.GetClassName();
-//	filename += "_curl.obj";
-//	WriteObjFile( filename.c_str(), init_shapes );
-//}
-
 void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points)
 {
 	vec3 seed = params.seed;
@@ -348,8 +259,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
 					int src_idx = start_idx - d_idx;
-					float best_t, ratio_blend = float(d_idx) / float(lerp_spacing);
-					ratio_blend = ratio_blend * ratio_blend * (3.0f - 2.0f * ratio_blend); // smoothstep
+					float best_t, ratio_blend = smoothstep( float(d_idx) / float(lerp_spacing) );
 					cur_seg_0 = FindNextBestSnapSeg(line_framed.points, src_idx, cur_seg_0, -1 /*inc*/, 1e8f, best_t);
 					if (cur_seg_0 == INDEX_NONE)
 						break;	// oups, should not happen
@@ -397,8 +307,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
 					int src_idx = end_idx + d_idx;
-					float best_t, ratio_blend = float(d_idx) / float(lerp_spacing);
-					ratio_blend = ratio_blend * ratio_blend * (3.0f - 2.0f * ratio_blend); // smoothstep
+					float best_t, ratio_blend = smoothstep( float(d_idx) / float(lerp_spacing) );
 					cur_seg_0 = FindNextBestSnapSeg(line_framed.points, src_idx, cur_seg_0, 1 /*inc*/, 1e8f, best_t);
 					if (cur_seg_0 == INDEX_NONE)
 						break;	// oups, should not happen
@@ -604,67 +513,6 @@ void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines,
 	}
 }
 
-//void SAUtils::ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter)
-//{
-//	// Lorentz attractor
-//
-//	Array<AttractorShape> init_shapes;
-//	//LorenzAttractor att0;//, Att1;
-//	//att0.m_init_point = vec3( 5.0, 0, 0 );
-//	//Att1.m_init_point = vec3( 5.0, 5.0, 5.0 );
-//	
-//	/*AizawaAttractor att0;
-//	att0.m_max_iter = 5000;
-//	att0.m_fatness_scale = 0.1f;*/
-//
-//	//att0.m_init_point = vec3( 0.1f, 0, 0 );
-//	//TSUCS2Attractor att0;
-//	//att0.m_init_point = vec3( 0.0, -0.05f, 0.01f );
-//
-////	att0.m_max_iter = 5000;
-//////	att0.m_init_point = vec3( -7.85f, -9.94f, 23.01f );
-////	//att0.m_init_point = vec3( -2.0, -2.4f, 7.0 );
-////	att0.m_init_point = vec3( 4.0, 0.01f, 0.5f );
-////	att0.m_fatness_scale = 0.4f;
-//
-//	AttractorShape AS0;
-//	AS0.attractor = attractor;
-//	AS0.attractor->m_init_point = seed;
-//
-//	//AS1.Attractor = &Att1;
-//	//AS1.m_max_iter = m_max_iter;
-//	init_shapes.push_back( AS0 );
-//	//init_shapes.push_back( AS1 );
-//
-//	AttractorShapeParams params;
-//	Array<vec3> local_shape;
-//	GenerateLocalShape( local_shape, params );
-//	const int32 num_local_points = local_shape.size();
-//    
-//    Array<quat> frames;
-//    Array<float> follow_angles;
-//
-//	for( int32 ShapeIdx = 0; ShapeIdx < init_shapes.size(); ShapeIdx++ )
-//	{	
-//		AttractorShape& S = init_shapes[ShapeIdx];
-//		S.attractor->LoopAdaptative(S.line_points, iter);
-//        
-//        GenerateFrames(S.line_points, frames, follow_angles);
-//
-//		// Generate shapes
-//		params.fatness_scale = S.attractor->m_fatness_scale;
-//		params.weld_vertex = true;
-//		GenerateTriVertices(S.tri_vertices, nullptr, local_shape, S.line_points, frames, follow_angles, params);
-//	}
-//
-//	// Generate tri index
-//	GenerateTriIndices( init_shapes, num_local_points );
-//
-//	std::string filename = "StrangeAttractor_";
-//	filename += AS0.attractor->GetClassName();
-//	filename += ".obj";
-//	WriteObjFile( filename.c_str(), init_shapes );
-//}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -673,7 +521,7 @@ void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines,
 void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
-    vec3 vx_prev, vy_prev, vz_prev;
+    vec3 vy_prev(1.f, 0.f, 0.f);
     
 	Array<vec3> const& line_points = line_framed.points;
 	Array<quat>& frames = line_framed.frames;
@@ -705,22 +553,22 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
         vec3 vx = cross( vy, vz );      // front vector
 		frames[i] = mat3(vx, vy, vz);
         
-        // Replace VX_follow inside VX, VZ frame
-        // Remove VY component
+        // Replace vz_follow inside vy, vz frame and remove vx component
         if( i == 1 )
             vz_follow = vz;
         
-        float dotX = dot( vx, vz_follow );
-        if( bigball::abs(dotX) > 0.99f )
+        float dot_x = dot( vx, vz_follow );
+        if( bigball::abs(dot_x) > 0.99f )
             int32 Break = 0;
-        vz_follow -= vx * dotX;
+        vz_follow -= vx * dot_x;
         vz_follow = normalize( vz_follow );
-        //VX_follow_array[i] = VX_follow;
         
         float dot_y = dot( vy, vz_follow );
         float dot_z = dot( vz, vz_follow );
         float delta_angle = bigball::atan2(dot_y, dot_z);
         follow_angles[i] = delta_angle;
+        
+        vy_prev = vy;
     }
     frames[0] = frames[1];
     frames[line_points.size()-1] = frames[line_points.size()-2];
@@ -728,18 +576,10 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
 }
 
-/*FQuat FQuat::FastLerp( const FQuat& A, const FQuat& B, const float Alpha )
-{
-    // To ensure the 'shortest route', we make sure the dot product between the both rotations is positive.
-    const float DotResult = (A | B);
-    const float Bias = FMath::FloatSelect(DotResult, 1.0f, -1.0f);
-    return (B * Alpha) + (A * (Bias * (1.f - Alpha)));
-}*/
-
 void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector, vec3* end_vector)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
-    vec3 vx_prev, vy_prev, vz_prev;
+    vec3 vy_prev(1.f, 0.f, 0.f);
     
     Array<vec3> const& line_points = line_framed.points;
     Array<quat>& frames = line_framed.frames;
@@ -751,16 +591,6 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
     bool constrained_angles = (start_vector != nullptr && end_vector != nullptr) ? true : false;
     if (constrained_angles)
         delta_rot = quat::rotate(*start_vector, *end_vector);
-
-    
-    //float delta_angle = end_angle - start_angle;
-	//if (constrained_angles)
-	//{
-	//	if (delta_angle > F_PI)
-	//		delta_angle = 2.f * F_PI - delta_angle;
-	//	else if (delta_angle < -F_PI)
-	//		delta_angle = -delta_angle - 2.f * F_PI;
-	//}
 
     for( int32 i = start_idx; i <= end_idx; i++ )
     {
@@ -787,42 +617,36 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
 
 		if (constrained_angles)
 		{
-			// Simply interpolate between requested angles
-			float ratio = float(i - start_idx) / float(end_idx - start_idx);
-            quat ratio_quat = lerp( quat(1.f), delta_rot, ratio );
+			// Simply interpolate between requested vectors
+			float ratio = smoothstep( float(i - start_idx) / float(end_idx - start_idx) );
+            quat ratio_quat = slerp( quat(1.f), delta_rot, ratio );
             ratio_quat = normalize(ratio_quat);
             vz_follow = ratio_quat.transform(*start_vector);
-    
-            
-			//float angle = start_angle + delta_angle * ratio;
-			//follow_angles[i] = angle;
 		}
 		else
 		{
-			// Replace VX_follow inside VX, VZ frame
-			// Remove VY component
 			if (i == start_idx)
 				vz_follow = vz;
         }
 
-        float dotX = dot(vx, vz_follow);
-        if (bigball::abs(dotX) > 0.99f)
+        // Replace vz_follow inside vy, vz frame and remove vx component
+        float dot_x = dot(vx, vz_follow);
+        if (bigball::abs(dot_x) > 0.99f)
             int32 Break = 0;
-        vz_follow -= vx * dotX;
+        vz_follow -= vx * dot_x;
         vz_follow = normalize(vz_follow);
 
         float dot_y = dot(vy, vz_follow);
         float dot_z = dot(vz, vz_follow);
         float delta_angle = bigball::atan2(dot_y, dot_z);
         follow_angles[i] = delta_angle;
+        
+        vy_prev = vy;
     }
     if (!start_continuity)
         frames[from_idx] = frames[from_idx + 1];
     if (!end_continuity)
         frames[to_idx] = frames[to_idx - 1];
-    //follow_angles[0] = follow_angles[1];
-    //follow_angles[line_points.size()-1] = follow_angles[line_points.size()-2];
-    
 }
 
 void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, const AttractorShapeParams& params)
@@ -1205,30 +1029,6 @@ int32 SAUtils::FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx,
 	return Neighbour;
 }
 
-/*vec3 SAUtils::FindNearestFollowVector(const vec3& ref_follow, const vec3& NeighbourFollow, const vec3& NeighbourVX, const vec3& NeighbourVZ, int32 local_edge_count)
-{
-	vec3 VY = cross( NeighbourVZ, NeighbourVX );
-	vec3 LeftFollow = cross( NeighbourFollow, VY );
-	LeftFollow = normalize(LeftFollow);
-
-	float best_dot = -FLT_MAX;
-	vec3 best_follow = NeighbourFollow;
-	for (int32 i = 0; i < local_edge_count; ++i)
-	{
-		float angle = 2.0f * F_PI * (float)i / (float)(local_edge_count);
-		float cf = bigball::cos( angle );
-		float sf = bigball::sin( angle );
-		vec3 new_follow = NeighbourFollow * cf + LeftFollow * sf;
-		float dot_follow = dot( new_follow, ref_follow );
-		if (dot_follow > best_dot)
-		{
-			best_dot = dot_follow;
-			best_follow = new_follow;
-		}
-	}
-
-	return best_follow;
-}*/
 
 void SAUtils::FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow)
 {
