@@ -39,12 +39,6 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 
 	attractor->LoopAdaptative(line_points, params.iter);
 
-	//if( skip_iter > 0 )
-	//{
-	//	skip_iter = min( skip_iter, (int32)line_points.size()-2 );
- //       line_points.erase(0,skip_iter);
-	//}
-
 	if (params.shearing_scale_x != 1.f || params.shearing_scale_y != 1.f || params.shearing_angle != 0.f)
 	{ 
 		const float cf = bigball::cos(params.shearing_angle);
@@ -83,16 +77,6 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_dt = init_dt;
 	attractor->m_adaptative_dist = init_ad;
 }
-
-// Cubic Hermine Curve / SmoothStep()
-static float Interpolation_C1(float x) { return x * x * (3.0f - 2.0f * x); }
-
-// Quintic Hermite Curve
-static float Interpolation_C2(float x) { return x * x * x * (x * (x * 6.0f - 15.0f) + 10.0f); }
-
-// 7x^3-7x^4+x^7
-static  float Interpolation_C2_Fast(float x) { float x3 = x*x*x; return (7.0f + (x3 - 7.0f) * x) * x3; }
-
 
 void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles)
 {
@@ -135,8 +119,8 @@ void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>&
 			float t = (float)d_idx / (float)delta_idx;
 			float t0 = clamp(1.0f - t * 2.0f, 0.0f, 1.0f);
 			float t1 = clamp(t * 2.0f - 1.0f, 0.0f, 1.0f);
-			t0 = Interpolation_C1(t0);
-			t1 = Interpolation_C1(t1);
+			t0 = smoothstep(t0);
+			t1 = smoothstep(t1);
 
 			int32 p_idx = start_line_idx + d_idx;
 			vec3 vl = line_points[p_idx];
@@ -153,14 +137,10 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	BB_LOG(SAUtils, Log, "MergeLinePoints\n");
 
 	// compute bounds
-	//Array<int> snap_segments;
-	const int nb_points = line_framed.points.size();
     Array<AABB> bounds;
 	ComputeBounds(line_framed.points, shape_params.merge_dist, bounds);
 	int nb_bounds = bounds.size();
 
-	//Array<AttractorMergeInfo> line_merges;
-	//line_merges.resize(nb_points);
 	Array<AttractorSnapRange> snap_ranges;
 
 	const int min_spacing = 9 * SAUtils::points_in_bound;
@@ -231,9 +211,24 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
         
         b_idx1 = next_idx;
 	}
+    
+    // check ending snap
+    const int nb_range = snap_ranges.size();
+    if (nb_range > 0)
+    {
+        // check if one range snaps onto beginning of curve
+        for (int snap_idx = 0; snap_idx < nb_range; snap_idx++)
+        {
+            if( snap_ranges[snap_idx].dst_segs.x == 0 )
+                break;
+        }
+        
+        // check if ending of curve snaps onto sthg
+        if( snap_ranges.Last().src_points.y == line_framed.points.size() - 1 )
+            int Break;
+    }
 
 	// build snapped_lines array
-	const int nb_range = snap_ranges.size();
 	if (nb_range > 0)
 	{
 		snapped_lines.reserve(nb_range + 2);
@@ -302,7 +297,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 			if (snap_idx < nb_range - 1 && shape_params.snap_interp)
 			{
 				// from unsnapped to snapped (i.e. from plugged to unplugged)
-				int prev_size = ref_framed.points.size();
+				//int prev_size = ref_framed.points.size();
 				int cur_seg_0 = snap_ranges[snap_idx + 1].dst_segs.x;
 				for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
 				{
@@ -343,7 +338,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	}
 }
 
-bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range/*, ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges*/)
+bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range)
 {
 	int start_0 = bigball::max( 0, b_idx0 * SAUtils::points_in_bound - 1 );
 	int end_0 = bigball::min((b_idx0 + 1) * SAUtils::points_in_bound + 1, line_points.size());
@@ -471,31 +466,6 @@ int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, i
 	return best_seg;
 }
 
-//
-//void SAUtils::SnapRange(Array<vec3>& line_points, float merge_dist, /*ivec2 r_0, ivec2 r_1,*/ Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges)
-//{
-//	BB_ASSERT_LOG(r_1.y - r_1.x + 1 == snap_segments.size(), ("SnapRange error"));
-//	const float sq_merge_dist = merge_dist * merge_dist;
-//
-//	for (int s = 0; s < snap_segments.size(); s++)
-//	{
-//		int c_1 = r_1.x + s;
-//		const vec3& seg_0 = line_points[snap_segments[s]];
-//		const vec3& seg_1 = line_points[snap_segments[s] + 1];
-//
-//		float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1], seg_0, seg_1, t);
-//		if (sq_dist < sq_merge_dist)
-//		{
-//			// overwrite point
-//			line_points[c_1] = seg_0 * (1.f - t) + seg_1 * t;
-//            line_merges[c_1].merge_parent_idx = snap_segments[s];
-//			line_merges[c_1].weight = 1.f;
-//		}
-//		else
-//			int Oups = 0;
-//	}
-//}
-
 void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/)
 {
 	Array<vec3> local_shape;
@@ -588,8 +558,8 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
     int start_idx = (start_continuity ? from_idx : from_idx + 1);
     int end_idx = (end_continuity ? to_idx : to_idx - 1);
 	quat delta_rot(1.f);
-    bool constrained_angles = (start_vector != nullptr && end_vector != nullptr) ? true : false;
-    if (constrained_angles)
+    bool constrained_vectors = (start_vector != nullptr && end_vector != nullptr) ? true : false;
+    if (constrained_vectors)
         delta_rot = quat::rotate(*start_vector, *end_vector);
 
     for( int32 i = start_idx; i <= end_idx; i++ )
@@ -615,7 +585,7 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
         vec3 vx = cross( vy, vz );      // front vector
 		frames[i] = mat3(vx, vy, vz);
 
-		if (constrained_angles)
+		if (constrained_vectors)
 		{
 			// Simply interpolate between requested vectors
 			float ratio = smoothstep( float(i - start_idx) / float(end_idx - start_idx) );
@@ -989,14 +959,11 @@ void SAUtils::GenerateLocalShape( Array<vec3>& local_shapes, const AttractorShap
 		}
 
 		vec3 V;
-		float Len;
 		for( int32 edge_idx = 0; edge_idx < params.local_edge_count; ++edge_idx )
 		{
 			const vec3& Prev = local_shapes[5*edge_idx];
 			const vec3& Next = local_shapes[5*(edge_idx+1) % nLocalPoint];
 			V = Next - Prev;
-			Len = length(V);
-			//V /= Len;
 
 			local_shapes[5*edge_idx + 1] = Prev + V * params.crease_width;
 			local_shapes[5*edge_idx + 2] = (Prev + V * (params.crease_width + params.crease_bevel)) * (1.0f - params.crease_depth);
@@ -1033,7 +1000,7 @@ int32 SAUtils::FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx,
 void SAUtils::FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow)
 {
 	mat3 src_mat(src_frame);
-	vec3 src_vx = src_mat.v0;   // FRONT
+	//vec3 src_vx = src_mat.v0;   // FRONT
 	vec3 src_vy = src_mat.v1;   // UP
 	vec3 src_vz = src_mat.v2;   // RIGHT
 	float src_cf = bigball::cos(src_follow_angle);
@@ -1041,7 +1008,7 @@ void SAUtils::FindNearestFollowVector(quat const& src_frame, float src_follow_an
     src_follow = src_vz * src_cf + src_vy * src_sf;
 
 	mat3 dst_mat(dst_frame);
-	vec3 dst_vx = dst_mat.v0;   // FRONT
+	//vec3 dst_vx = dst_mat.v0;   // FRONT
 	vec3 dst_vy = dst_mat.v1;   // UP
 	vec3 dst_vz = dst_mat.v2;   // RIGHT
 
@@ -1060,12 +1027,6 @@ void SAUtils::FindNearestFollowVector(quat const& src_frame, float src_follow_an
 			dst_follow = new_follow;
 		}
 	}
-
-	// ensure dst_angle is in [-PI, PI] range
-	//if (best_angle > F_PI)
-	//	best_angle -= F_PI;
-
-	//return best_angle;
 }
 
 void SAUtils::MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& VX_follow_array, const Array<vec3>& VX_array, const Array<vec3>& VZ_array, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params )
