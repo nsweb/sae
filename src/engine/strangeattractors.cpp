@@ -78,60 +78,6 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_adaptative_dist = init_ad;
 }
 
-void SAUtils::TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles)
-{
-	const int handle_count = attr_handles.size();
-	if (handle_count < 2)
-	{
-		twist_line_points = line_points;
-		twist_frames = frames;
-		twist_follow_angles = follow_angles;
-		return;
-	}
-
-	twist_line_points.reserve(line_points.size());
-	twist_frames.reserve(frames.size());
-	twist_follow_angles.reserve(follow_angles.size());
-
-	// Assumes line_idx are ordered
-
-	for (int h_idx = 0; h_idx < handle_count - 1; h_idx++)
-	{
-		AttractorHandle const& h0 = attr_handles[h_idx];
-		AttractorHandle const& h1 = attr_handles[h_idx + 1];
-		int start_line_idx = h0.m_line_idx;
-        if (h0.m_type == AttractorHandle::eHT_Cut && h0.m_line_idx < h0.m_mesh_idx && h0.m_mesh_idx < h1.m_line_idx)
-			start_line_idx = h0.m_mesh_idx;		// take the shortest path
-		vec3 v0 = line_points[start_line_idx];
-		vec3 v1 = line_points[h0.m_mesh_idx];
-		vec3 start_offset = v1 - v0;
-
-		//int end_line_idx = h1.m_line_idx;
-		//if (start_line_idx < h1.m_mesh_idx && h1.m_mesh_idx < h1.m_line_idx)
-		//	end_line_idx = h1.m_mesh_idx;		// take the shortest path
-		vec3 v2 = line_points[h1.m_line_idx];
-		vec3 v3 = line_points[h1.m_mesh_idx];
-		vec3 end_offset = v3 - v2;
-
-		int32 delta_idx = h1.m_line_idx - start_line_idx;
-		for (int32 d_idx = 0; d_idx < delta_idx; d_idx++)
-		{
-			float t = (float)d_idx / (float)delta_idx;
-			float t0 = clamp(1.0f - t * 2.0f, 0.0f, 1.0f);
-			float t1 = clamp(t * 2.0f - 1.0f, 0.0f, 1.0f);
-			t0 = smoothstep(t0);
-			t1 = smoothstep(t1);
-
-			int32 p_idx = start_line_idx + d_idx;
-			vec3 vl = line_points[p_idx];
-			vl += start_offset * t0 + end_offset * t1;
-			twist_line_points.push_back(vl);
-			twist_frames.push_back(frames[p_idx]);
-			twist_follow_angles.push_back(follow_angles[p_idx]);
-		}
-	}
-}
-
 void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
 	BB_LOG(SAUtils, Log, "MergeLinePoints\n");
@@ -212,20 +158,25 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
         b_idx1 = next_idx;
 	}
     
-    // check ending snap
+    // check ending snap and whether we need to cut the line endings
     const int nb_range = snap_ranges.size();
-    if (nb_range > 0)
+	int first_index = -1;
+	int last_index = nb_range - 1;
+    if (nb_range > 1 && shape_params.remove_line_ends)
     {
         // check if one range snaps onto beginning of curve
-        for (int snap_idx = 0; snap_idx < nb_range; snap_idx++)
+		int snap_idx = 0;
+        for (snap_idx = 0; snap_idx < nb_range; snap_idx++)
         {
             if( snap_ranges[snap_idx].dst_segs.x == 0 )
                 break;
         }
+		if (snap_idx == nb_range)
+			first_index = 0;
         
         // check if ending of curve snaps onto sthg
-        if( snap_ranges.Last().src_points.y == line_framed.points.size() - 1 )
-            int Break;
+        if( snap_ranges.Last().src_points.y < line_framed.points.size() - 1 )
+            last_index = nb_range - 2;
     }
 
 	// build snapped_lines array
@@ -233,7 +184,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 	{
 		snapped_lines.reserve(nb_range + 2);
 
-		for (int snap_idx = -1; snap_idx < nb_range; snap_idx++)
+		for (int snap_idx = first_index; snap_idx <= last_index; snap_idx++)
 		{
 			int start_idx = (snap_idx >= 0 ? snap_ranges[snap_idx].src_points.y : 0);
 			int end_idx = (snap_idx < nb_range - 1 ? snap_ranges[snap_idx + 1].src_points.x : line_framed.points.size() - 1);

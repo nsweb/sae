@@ -388,6 +388,7 @@ struct AttractorShapeParams
 	float fatness_scale;
 	bool weld_vertex;
 	bool snap_interp;
+	bool remove_line_ends;
 	//int32 merge_start;
 	//int32 merge_end;
 	int32 simplify_level;
@@ -400,6 +401,8 @@ struct AttractorShapeParams
 	AttractorShapeParams() :
 		fatness_scale(1.0f),
 		weld_vertex(true),
+		snap_interp(false),
+		remove_line_ends(false),
 		//merge_start(0),
 		//merge_end(0),
 		simplify_level(1),
@@ -412,7 +415,7 @@ struct AttractorShapeParams
 
 	bool operator == (AttractorShapeParams& oth)
 	{
-		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
+		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && remove_line_ends == oth.remove_line_ends && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
 			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist;
 	}
 };
@@ -518,7 +521,6 @@ namespace SAUtils
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
-	void		TwistLinePoints(const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles, const Array<AttractorHandle>& attr_handles, Array<vec3>& twist_line_points, Array<quat>& twist_frames, Array<float>& twist_follow_angles);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );

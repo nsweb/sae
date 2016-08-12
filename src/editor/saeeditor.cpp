@@ -286,6 +286,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
 		ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
+		ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 
 		ImGui::Separator();
         
