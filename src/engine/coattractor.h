@@ -52,15 +52,8 @@ public:
 	StrangeAttractor*       m_attractor;
     
 	AttractorLineFramed		m_line_framed;
-    //Array<vec3>             m_line_points;
-    //Array<quat>             m_frames;
-    //Array<float>            m_follow_angles;
-	// 
+
 	Array<AttractorLineFramed>	m_snapped_lines;
-	//Array<vec3>				m_twist_line_points;
-	//Array<quat>				m_twist_frames;
-	//Array<float>			m_twist_follow_angles;
-	// 
     Array<vec3>             m_tri_vertices;
 	Array<vec3>             m_tri_normals;
 	Array<float>            m_tri_colors;

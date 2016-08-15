@@ -14,6 +14,7 @@ enum eAttractorType
 	eAttractor_ChenLee,
 	eAttractor_DequanLi,
 	eAttractor_LorentzMod2,
+    eAttractor_SpiralTest,
 	eAttractor_MAX
 };
 
@@ -339,6 +340,53 @@ public:
 	virtual const char* GetClassName() const override  { return "LorentzMod2"; }
 };
 
+//////////////////////////////////////////////////////////////////////////
+class SpiralTestAttractor : public StrangeAttractor
+{
+public:
+
+    SpiralTestAttractor()
+    {
+        m_type = eAttractor_SpiralTest;
+        
+        m_init_point = vec3( 5.f, 0.f, 0.f );
+
+        m_dt = 0.0025f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count) const override
+    {
+        vec3 P( m_init_point.x, m_init_point.y, 0.f );
+        float r = length( P.xy );
+        float alpha = bigball::atan2(P.y, P.x);
+        //float AdDt = bigball::abs(m_adaptative_dist / m_dt);
+        float dalpha = m_adaptative_dist / r;
+        float dz = m_init_point.z;
+        
+        for (int32 i = 0; i < iter_count; i++)
+        {
+            alpha += dalpha;
+            P.xy = vec2( bigball::cos(alpha), bigball::sin(alpha) ) * r;
+            P.z += dz;
+            
+            //P += DP * (DRatio * m_dt);
+            out_pos.push_back( P );
+        }
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    {
+        vec2 v = normalize( P.xy );
+        DP.x = -v.y;
+        DP.y = v.x;
+        DP.z = m_init_point.z;
+    }
+    
+    virtual const char* GetClassName() const override  { return "SpiralTest"; }
+};
+
+//////////////////////////////////////////////////////////////////////////
 class AttractorShape
 {
 public:
@@ -474,9 +522,9 @@ struct AABB
     static bool BoundsIntersect(AABB const& a, AABB const& b);
 };
 
-struct AttractorMergeInfo
+struct _AttractorMergeInfo
 {
-	AttractorMergeInfo() : merge_parent_idx(INDEX_NONE), weight(0.f) {}
+	_AttractorMergeInfo() : merge_parent_idx(INDEX_NONE), weight(0.f) {}
     
     int merge_parent_idx;
 	float weight;

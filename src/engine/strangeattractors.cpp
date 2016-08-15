@@ -1086,6 +1086,8 @@ StrangeAttractor* SAUtils::CreateAttractorType(String const& attractor_name)
 		return CreateAttractorType(eAttractor_DequanLi );
 	if (attractor_name == "LorentzMod2")
 		return CreateAttractorType(eAttractor_LorentzMod2 );
+    if (attractor_name == "SpiralTest")
+        return CreateAttractorType(eAttractor_SpiralTest );
 	
 	return nullptr;
 }
@@ -1106,6 +1108,8 @@ StrangeAttractor* SAUtils::CreateAttractorType(eAttractorType attractor_type)
         return new DequanLiAttractor;
     if (attractor_type == eAttractor_LorentzMod2)
         return new LorentzMod2Attractor;
+    if (attractor_type == eAttractor_SpiralTest)
+        return new SpiralTestAttractor;
     
     return nullptr;
 }
@@ -1119,6 +1123,7 @@ void SAUtils::GetAttractorTypeList(Array<String>& attractor_names)
 	attractor_names.push_back("ChenLee");
 	attractor_names.push_back("DequanLi");
 	attractor_names.push_back("LorentzMod2");
+    attractor_names.push_back("SpiralTest");
 }
 
 void SAUtils::ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds)
