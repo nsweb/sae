@@ -522,18 +522,36 @@ struct AABB
     static bool BoundsIntersect(AABB const& a, AABB const& b);
 };
 
-struct _AttractorMergeInfo
+struct AttractorSnapRange
 {
-	_AttractorMergeInfo() : merge_parent_idx(INDEX_NONE), weight(0.f) {}
-    
-    int merge_parent_idx;
+	ivec2 src_points;
+	ivec2 dst_segs;
+};
+
+struct SnapSegInfo
+{
+	int32 seg_idx;
+	float t_seg;
 	float weight;
 };
 
-struct AttractorSnapRange
+struct RefSnap
 {
-	ivec2 dst_segs;
-	ivec2 src_points;
+	int32 snap_range_idx;
+	int32 p_idx;
+	int32 seg_idx;
+	float t_seg;
+
+	bool operator == (RefSnap const& oth)
+	{
+		return snap_range_idx == oth.snap_range_idx && p_idx == oth.p_idx && seg_idx == oth.seg_idx && t_seg == oth.t_seg;
+	}
+};
+
+struct AttractorSnapRangeEx : public AttractorSnapRange
+{
+	Array<SnapSegInfo> dst_seg_array;	// contains (src_points.y - src_points.x + 1) entries
+	Array<SnapSegInfo> src_seg_array;	// reversed snap info, built from dst_seg_array, contains (dst_segs.y - dst_segs.x + 2) entries
 };
 
 struct AttractorLineFramed
@@ -570,6 +588,7 @@ namespace SAUtils
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
@@ -580,7 +599,9 @@ namespace SAUtils
 
 	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );
-	void		MergeLinePoints( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );
+#if 0
+	void		MergeLinePointsOld( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );
+#endif
 
 	StrangeAttractor*	CreateAttractorType(String const& attractor_name);
     StrangeAttractor*	CreateAttractorType(eAttractorType attractor_type);
@@ -588,10 +609,10 @@ namespace SAUtils
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
-	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range /*ivec2& r_0, ivec2& r_1, Array<int>& snap_segments, Array<AttractorMergeInfo>& line_merges*/);
+	bool FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRange& snap_range );
+	bool FindSnapRangeEx(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRangeEx& snap_range);
+	bool ComputeReverseSnapRangeExInfo(const Array<vec3>& line_points, float merge_dist, AttractorSnapRangeEx& snap_range);
 	int	FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, int cur_seg_0, int inc, float sq_merge_dist, float& best_t);
-	//void SnapRange(Array<vec3>& line_points, float merge_dist, /*ivec2 r_0, ivec2 r_1,*/ Array<int> const& snap_segments, Array<AttractorMergeInfo>& line_merges);
-    //void ComputeBoundRange(int b_idx, int& start, int& end);
 };
 
 #endif	// SAESTRANGEATTRACTORS_H
