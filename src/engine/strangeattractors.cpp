@@ -579,14 +579,41 @@ bool SAUtils::ComputeReverseSnapRangeExInfo(const Array<vec3>& points, float mer
 
 	// compute weighting info
 	const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
-	//if (snap_idx >= 0 && shape_params.snap_interp)
+	{
+		const int dst_seg_count = snap_range.dst_seg_array.size();
+		const int dst_half_count = dst_seg_count / 2;
+		for (int d_idx = 0; d_idx < dst_half_count; d_idx++)
+		{
+			SnapSegInfo& snap_info = snap_range.dst_seg_array[d_idx];
+			float ratio_blend = bigball::min(smoothstep(float(d_idx) / float(lerp_spacing)), 1.f);
+			snap_info.weight = ratio_blend;
+		}
+		for (int d_idx = dst_half_count; d_idx < dst_seg_count; d_idx++)
+		{
+			SnapSegInfo& snap_info = snap_range.dst_seg_array[d_idx];
+			float ratio_blend = bigball::min(smoothstep(float(dst_seg_count - d_idx - 1) / float(lerp_spacing)), 1.f);
+			snap_info.weight = ratio_blend;
+		}
+	}
 
-	// from snapped to unsnapped (i.e. from unplugged to plugged)
-	//for (int d_idx = 1; d_idx <= lerp_spacing; d_idx++)
-	//{
-	//	int src_idx = start_idx - d_idx;
-	//	float best_t, ratio_blend = smoothstep(float(d_idx) / float(lerp_spacing));
-	//}
+	// compute reverse weighting
+	{
+		const int src_seg_count = snap_range.src_seg_array.size();
+		const int src_half_count = src_seg_count / 2;
+		for (int d_idx = 0; d_idx < src_half_count; d_idx++)
+		{
+			SnapSegInfo& rev_snap_info = snap_range.src_seg_array[d_idx];
+			if (rev_snap_info.seg_idx < snap_range.src_points.x || rev_snap_info.seg_idx >= snap_range.src_points.y)
+				rev_snap_info.weight = 0.f;
+			else
+			{
+				int d_idx = rev_snap_info.seg_idx - snap_range.src_points.x;
+				SnapSegInfo& snap_info_0 = snap_range.dst_seg_array[d_idx];
+				SnapSegInfo& snap_info_1 = snap_range.dst_seg_array[d_idx + 1];
+				rev_snap_info.weight = snap_info_0.weight + rev_snap_info.t_seg * (snap_info_1.weight - snap_info_0.weight);
+			}
+		}
+	}
 
 	return true;
 }
