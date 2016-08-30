@@ -89,6 +89,8 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 	int nb_bounds = bounds.size();
 
 	const int min_spacing = 9 * SAUtils::points_in_bound;
+    
+    snapped_lines.push_back(line_framed); // temporary
 
 	int b_idx1 = 0;
 	while (b_idx1 < nb_bounds)
@@ -112,9 +114,23 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 					{
 						// compute relative weights of snap and compute reverse infos
 						ComputeReverseSnapRangeExInfo(line_framed.points, shape_params.merge_dist, snap_range);
-
-
-						// don't snap on an already snapped segment
+                        
+                        AttractorLineFramed& ref_framed = snapped_lines.Last();
+                        
+                        for(int d_idx=0; d_idx < snap_range.dst_seg_array.size(); d_idx++)
+                        {
+                            SnapSegInfo& snap_info = snap_range.dst_seg_array[d_idx];
+                            int src_idx = snap_range.src_points.x + d_idx;
+                            vec3 src_pos = line_framed.points[src_idx];
+                            vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg;
+                            vec3 delta_pos = dst_pos - src_pos;
+                            vec3 p = src_pos + delta_pos * snap_info.weight;
+                            ref_framed.points[src_idx] = p;
+                        }
+            
+                                
+                                
+                                // don't snap on an already snapped segment
 						/*int snap_idx = 0;
 						for (; snap_idx < snap_ranges.size(); snap_idx++)
 						{
