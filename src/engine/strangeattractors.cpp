@@ -122,11 +122,22 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
                             SnapSegInfo& snap_info = snap_range.dst_seg_array[d_idx];
                             int src_idx = snap_range.src_points.x + d_idx;
                             vec3 src_pos = line_framed.points[src_idx];
-                            vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg;
+                            vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg*0.5f) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg*0.5f;
                             vec3 delta_pos = dst_pos - src_pos;
                             vec3 p = src_pos + delta_pos * snap_info.weight;
                             ref_framed.points[src_idx] = p;
                         }
+
+						for (int d_idx = 0; d_idx < snap_range.src_seg_array.size(); d_idx++)
+						{
+							SnapSegInfo& snap_info = snap_range.src_seg_array[d_idx];
+							int src_idx = snap_range.dst_segs.x + d_idx;
+							vec3 src_pos = line_framed.points[src_idx];
+							vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg*0.5f) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg*0.5f;
+							vec3 delta_pos = dst_pos - src_pos;
+							vec3 p = src_pos + delta_pos * snap_info.weight;
+							ref_framed.points[src_idx] = p;
+						}
             
                                 
                                 
@@ -594,6 +605,8 @@ bool SAUtils::ComputeReverseSnapRangeExInfo(const Array<vec3>& points, float mer
 	}
 
 	// compute weighting info
+	static float test = 2.f;
+	float res = smoothstep(test);
 	const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
 	{
 		const int dst_seg_count = snap_range.dst_seg_array.size();
@@ -615,8 +628,7 @@ bool SAUtils::ComputeReverseSnapRangeExInfo(const Array<vec3>& points, float mer
 	// compute reverse weighting
 	{
 		const int src_seg_count = snap_range.src_seg_array.size();
-		const int src_half_count = src_seg_count / 2;
-		for (int d_idx = 0; d_idx < src_half_count; d_idx++)
+		for (int d_idx = 0; d_idx < src_seg_count; d_idx++)
 		{
 			SnapSegInfo& rev_snap_info = snap_range.src_seg_array[d_idx];
 			if (rev_snap_info.seg_idx < snap_range.src_points.x || rev_snap_info.seg_idx >= snap_range.src_points.y)
