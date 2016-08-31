@@ -522,12 +522,6 @@ struct AABB
     static bool BoundsIntersect(AABB const& a, AABB const& b);
 };
 
-struct AttractorSnapRange
-{
-	ivec2 src_points;
-	ivec2 dst_segs;
-};
-
 struct SnapSegInfo
 {
 	int32 seg_idx;
@@ -548,10 +542,22 @@ struct RefSnap
 	}
 };
 
+struct AttractorSnapRange
+{
+    ivec2 src_points;
+    ivec2 dst_segs;
+};
+
 struct AttractorSnapRangeEx : public AttractorSnapRange
 {
 	Array<SnapSegInfo> dst_seg_array;	// contains (src_points.y - src_points.x + 1) entries
 	Array<SnapSegInfo> src_seg_array;	// reversed snap info, built from dst_seg_array, contains (dst_segs.y - dst_segs.x + 2) entries
+    
+    void Clear()
+    {
+        dst_seg_array.clear();
+        src_seg_array.clear();
+    }
 };
 
 struct AttractorLineFramed

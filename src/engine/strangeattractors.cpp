@@ -91,6 +91,9 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 	const int min_spacing = 9 * SAUtils::points_in_bound;
     
     snapped_lines.push_back(line_framed); // temporary
+    
+    AttractorSnapRangeEx snap_range;
+    ivec2 last_src_points = { -1, -1 };
 
 	int b_idx1 = 0;
 	while (b_idx1 < nb_bounds)
@@ -107,10 +110,11 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 			if (AABB::BoundsIntersect(b0, b1))
 			{
 				// potential merge, check whether at least one segment in b1 is near one in b0
-				AttractorSnapRangeEx snap_range;
+                snap_range.Clear();
 				if (FindSnapRangeEx(line_framed.points, b_idx0, b_idx1, shape_params.merge_dist, snap_range))
 				{
-					if (snap_range.src_points.y - snap_range.src_points.x >= min_spacing)	// ignore snap_ranges if they are too short
+					if (snap_range.src_points.y - snap_range.src_points.x >= min_spacing ||	// ignore snap_ranges if they are too short
+                        (/*)snap_range.src_points.y >= last_src_points.x && */snap_range.src_points.x > last_src_points.y))
 					{
 						// compute relative weights of snap and compute reverse infos
 						ComputeReverseSnapRangeExInfo(line_framed.points, shape_params.merge_dist, snap_range);
@@ -122,9 +126,9 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
                             SnapSegInfo& snap_info = snap_range.dst_seg_array[d_idx];
                             int src_idx = snap_range.src_points.x + d_idx;
                             vec3 src_pos = line_framed.points[src_idx];
-                            vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg*0.5f) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg*0.5f;
+                            vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg;
                             vec3 delta_pos = dst_pos - src_pos;
-                            vec3 p = src_pos + delta_pos * snap_info.weight;
+                            vec3 p = src_pos + delta_pos * snap_info.weight * 0.5f;
                             ref_framed.points[src_idx] = p;
                         }
 
@@ -133,9 +137,9 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 							SnapSegInfo& snap_info = snap_range.src_seg_array[d_idx];
 							int src_idx = snap_range.dst_segs.x + d_idx;
 							vec3 src_pos = line_framed.points[src_idx];
-							vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg*0.5f) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg*0.5f;
+							vec3 dst_pos = line_framed.points[snap_info.seg_idx] * (1.f - snap_info.t_seg) + line_framed.points[snap_info.seg_idx + 1] * snap_info.t_seg;
 							vec3 delta_pos = dst_pos - src_pos;
-							vec3 p = src_pos + delta_pos * snap_info.weight;
+							vec3 p = src_pos + delta_pos * snap_info.weight * 0.5f;
 							ref_framed.points[src_idx] = p;
 						}
             
@@ -175,11 +179,14 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
 							}
 
 							if (!skip_insert)
-								snap_ranges.push_back(snap_range);
+								snap_ranges.push_back(snap_range);*/
+                        
+                        last_src_points.x = snap_range.src_points.x;
+                        last_src_points.y = snap_range.src_points.y;
 
 							next_idx = 1 + snap_range.src_points.y / SAUtils::points_in_bound;
 							break;
-						}*/
+						//}
 					}
 				}
 			}
