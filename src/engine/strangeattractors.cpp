@@ -78,6 +78,26 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_adaptative_dist = init_ad;
 }
 
+void MergeLinePoints3()
+{
+	// New algo with barycenters
+	// array<barycenter_points>
+	// struct barycenter_points { int first_leading_seg, vec3 pos, int w, int next_bary_idx }
+	// array<barrycenter_id>
+	// grid<segment>
+	// grid<barycenter_points>
+	// 1- sort every line segment into a grid
+	// 2- Parse segment in order, find a barycenter seg nearby <= merge_dist
+	//		- if it exists, point to it (array<barrycenter_id>) and update barycenter point info with weighted average(pos + w)
+	//		- otherwise, create a new barycenter point / seg with current seg info (first_leading_seg = me, bary pos = seg pos, w = 1)
+
+	// interpolate weights
+	// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
+
+	// compute positions and frames
+	//		- if first_leading_seg = me, push pos 
+}
+
 // Second iteration of MergeLinePoints
 void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
