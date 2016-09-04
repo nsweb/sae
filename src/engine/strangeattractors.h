@@ -581,6 +581,39 @@ struct AttractorLineFramed
 	ivec4			snap_ranges;
 };
 
+struct SABarycenterRef
+{
+    int first_leading_seg;
+    vec3 pos;
+    int16 weight;
+    int16 is_last_in_chain;//chain_idx;
+    //int next_bary_idx;
+};
+
+struct SACell
+{
+    Array<int> segs;
+    Array<int> barys;
+};
+
+struct SAGrid
+{
+    Array<SACell> cells;
+    Array<SABarycenterRef> bary_points;
+    Array<int> bary_chains; // indices to first elements in chains
+    Array<int> seg_bary_array;
+    
+    //vec3 cell_size;
+    float cell_unit;
+    ivec3 grid_dim;
+    AABB grid_bound;
+    
+    void InitGrid(const Array<vec3>& line_points, int max_cell);
+    int GetCellIdx(vec3 p) const;
+    int FindBaryCenterSeg(int seg_idx, vec3 p_0, vec3 p_1, float max_dist);
+    
+};
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -595,6 +628,7 @@ namespace SAUtils
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+    void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);

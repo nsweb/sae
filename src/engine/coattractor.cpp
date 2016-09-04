@@ -141,7 +141,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
         m_shape_params.weld_vertex = false;
 
 		if (m_shape_params.merge_dist > 0.f)
-			SAUtils::MergeLinePoints2(m_line_framed, cohandle->m_handles, m_shape_params, m_snapped_lines);
+			SAUtils::MergeLinePoints3(m_line_framed, cohandle->m_handles, m_shape_params, m_snapped_lines);
 		else
 			m_snapped_lines.push_back( m_line_framed );
 

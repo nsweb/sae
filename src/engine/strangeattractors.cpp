@@ -78,18 +78,28 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, Attract
 	attractor->m_adaptative_dist = init_ad;
 }
 
-void MergeLinePoints3()
+void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
+    BB_LOG(SAUtils, Log, "MergeLinePoints2\n");
+    
 	// New algo with barycenters
-	// array<barycenter_points>
-	// struct barycenter_points { int first_leading_seg, vec3 pos, int w, int next_bary_idx }
-	// array<barrycenter_id>
-	// grid<segment>
-	// grid<barycenter_points>
+    SAGrid grid;
+    
 	// 1- sort every line segment into a grid
+    grid.InitGrid(line_framed.points, 1000);
+    
 	// 2- Parse segment in order, find a barycenter seg nearby <= merge_dist
-	//		- if it exists, point to it (array<barrycenter_id>) and update barycenter point info with weighted average(pos + w)
-	//		- otherwise, create a new barycenter point / seg with current seg info (first_leading_seg = me, bary pos = seg pos, w = 1)
+    const Array<vec3>& line_points = line_framed.points;
+    const int nb_points = line_points.size();
+    for (int seg_idx = 0; seg_idx < nb_points-1; seg_idx++)
+    {
+        int cell_id = grid.GetCellIdx(line_points[seg_idx]);
+        grid.FindBaryCenterSeg(seg_idx, line_points[seg_idx], line_points[seg_idx + 1], shape_params.merge_dist);
+        
+    
+        //		- if it exists, point to it (array<barrycenter_id>) and update barycenter point info with weighted average(pos + w)
+        //		- otherwise, create a new barycenter point / seg with current seg info (first_leading_seg = me, bary pos = seg pos, w = 1)
+    }
 
 	// interpolate weights
 	// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
@@ -1544,3 +1554,98 @@ bool AABB::BoundsIntersect(AABB const& a, AABB const& b)
 
 	return true;
 }
+
+void SAGrid::InitGrid(const Array<vec3>& line_points, int max_cell)
+{
+    //Array<SACell> cells;
+    //float cell_dim;
+    //ivec3 grid_size;
+    //AABB grid_bound;
+    
+    // compute grid bound
+    vec3 min = vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+    vec3 max = vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    
+    const int nb_points = line_points.size();
+    for (int p_idx = 0; p_idx < nb_points; p_idx++)
+    {
+        min = bigball::min(line_points[p_idx], min);
+        max = bigball::max(line_points[p_idx], max);
+    }
+    
+    grid_bound.min = min;
+    grid_bound.max = max;
+    vec3 diff = max - min;
+    
+    cell_unit = bigball::pow( (diff.x * diff.y * diff.z) / max_cell, 0.33333333f );
+    grid_dim.x = (int) (diff.x / cell_unit + 0.99999f);
+    grid_dim.y = (int) (diff.y / cell_unit + 0.99999f);
+    grid_dim.z = (int) (diff.z / cell_unit + 0.99999f);
+    int real_max_cell = grid_dim.x * grid_dim.y * grid_dim.z;
+
+
+    // init grid
+    cells.resize(real_max_cell);
+    
+    // insert segments into grid
+    // assume that segments are stored into cells by their first point, even if second point is in another cell
+    for (int p_idx = 0; p_idx < nb_points - 1; p_idx++)
+    {
+        int cell_id = GetCellIdx(line_points[p_idx]);
+        cells[cell_id].segs.push_back(p_idx);
+    }
+}
+
+int SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0, vec3 p_1, float max_dist)
+{
+    //Array<SACell> cells;
+    //Array<SABarycenterRef> bary_points;
+    //Array<int> bary_chains;
+    //Array<int> seg_bary_array;
+    //float cell_unit;
+    //ivec3 grid_dim;
+    //AABB grid_bound;
+    
+    int i = (int)(p_0.x / cell_unit);
+    int j = (int)(p_0.y / cell_unit);
+    int k = (int)(p_0.z / cell_unit);
+    int i0 = max(0, i - 1); int i1 = min(grid_dim.x - 1, i + 1);
+    int j0 = max(0, j - 1); int j1 = min(grid_dim.y - 1, j + 1);
+    int k0 = max(0, k - 1); int k1 = min(grid_dim.z - 1, k + 1);
+    
+    // search 3x3x3 cells in neighborhood
+    for( int z = k0; z < k1; z++ )
+    {
+        for( int y = j0; y < j1; y++ )
+        {
+            for( int x = i0; x < i1; x++ )
+            {
+                int cell_id = x + grid_dim.x * y + grid_dim.x * grid_dim.y * z;
+                SACell const& cell = cells[cell_id];
+                for( int bary_it=0; bary_it < cell.barys.size(); bary_it++ )
+                {
+                    int bary_idx = cell.barys[bary_it];
+                    SABarycenterRef const& b_0 = bary_points[bary_idx];
+                    if (b_0.is_last_in_chain)
+                        continue;
+                    SABarycenterRef const& b_1 = bary_points[bary_idx + 1];
+                    vec3 b_vec = b_1.pos - b_0.pos;
+                    
+                    //float t_seg;
+                    //intersect::SquaredDistancePointSegment(points[p_idx], points[snap_segs[p_idx]], points[snap_segs[p_idx] + 1], t_seg);
+                }
+            }
+        }
+    }
+
+}
+
+int SAGrid::GetCellIdx(vec3 p) const
+{
+    int i = (int)(p.x / cell_unit);
+    int j = (int)(p.y / cell_unit);
+    int k = (int)(p.z / cell_unit);
+    int cell_id = i + grid_dim.x * j + grid_dim.x * grid_dim.y * k;
+    return cell_id;
+}
+
