@@ -586,8 +586,7 @@ struct SABarycenterRef
     int first_leading_seg;
     vec3 pos;
     int16 weight;
-    int16 is_last_in_chain;//chain_idx;
-    //int next_bary_idx;
+	int16 is_last_in_chain : 1;
 };
 
 struct SACell
@@ -610,7 +609,7 @@ struct SAGrid
     
     void InitGrid(const Array<vec3>& line_points, int max_cell);
     int GetCellIdx(vec3 p) const;
-    int FindBaryCenterSeg(int seg_idx, vec3 p_0, vec3 p_1, float max_dist);
+    int FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist);
     
 };
 
