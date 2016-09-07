@@ -586,7 +586,7 @@ struct SABarycenterRef
     int first_leading_seg;
     vec3 pos;
     int16 weight;
-	int16 is_last_in_chain : 1;
+	int16 is_last_in_chain;
 };
 
 struct SACell

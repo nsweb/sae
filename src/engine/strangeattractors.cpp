@@ -136,7 +136,8 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
 		else
 		{
 			SABarycenterRef* prev_bary = nullptr;
-			if (grid.bary_points.size())
+            int nb_bary = grid.bary_points.size();
+			if (nb_bary)
 			{
 				prev_bary = &grid.bary_points.Last();
 			}
@@ -145,30 +146,48 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
 			{
 				// continuing previous chain
 				prev_bary->is_last_in_chain = 0;
+                grid.seg_bary_array[seg_idx] = nb_bary - 1;
 
 				SABarycenterRef new_bary_1 = { seg_idx + 1, p_1, 1 /*weight*/, 1 /*is_last_in_chain*/};
 				grid.bary_points.push_back(new_bary_1);
 				int new_cell_id = grid.GetCellIdx(p_1);
-				grid.cells[new_cell_id].barys.push_back(grid.bary_points.size()-1);
+				grid.cells[new_cell_id].barys.push_back( nb_bary );
 			}
 			else
 			{
 				// start new chain
 				SABarycenterRef new_bary_0 = { seg_idx, p_0, 1 /*weight*/, 0 /*is_last_in_chain*/ };
 				grid.bary_points.push_back(new_bary_0);
-				grid.bary_chains.push_back(grid.bary_points.size() - 1);
-				grid.cells[cell_id].barys.push_back(grid.bary_points.size() - 1);
+				grid.bary_chains.push_back( nb_bary );
+				grid.cells[cell_id].barys.push_back( nb_bary );
+                grid.seg_bary_array[seg_idx] =  nb_bary;
 
 				SABarycenterRef new_bary_1 = { seg_idx + 1, p_1, 1 /*weight*/, 1 /*is_last_in_chain*/ };
 				grid.bary_points.push_back(new_bary_1);
 				int new_cell_id = grid.GetCellIdx(p_1);
-				grid.cells[new_cell_id].barys.push_back(grid.bary_points.size() - 1);
+				grid.cells[new_cell_id].barys.push_back( nb_bary + 1 );
 			}
 		}
-        
     }
-
-	// interpolate weights
+    
+    // TEMP debug view
+    for( int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++ )
+    {
+        AttractorLineFramed new_framed;
+        snapped_lines.push_back(new_framed);
+        AttractorLineFramed& ref_framed = snapped_lines.Last();
+        
+        int bary_idx = grid.bary_chains[chain_idx];
+        SABarycenterRef const* bary = &grid.bary_points[bary_idx];
+        while( !bary->is_last_in_chain )
+        {
+            ref_framed.points.push_back(bary->pos);
+            bary = &grid.bary_points[++bary_idx];
+        }
+        GenerateFrames(ref_framed);
+    }
+    
+            // interpolate weights
 	// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
 
 	// compute positions and frames
