@@ -109,6 +109,8 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     const int nb_points = line_points.size();
     for (int seg_idx = 0; seg_idx < nb_points-1; seg_idx++)
     {
+        //if( seg_idx == 261 || seg_idx == 262 || seg_idx == 523 || seg_idx == 524 || seg_idx == 634 || seg_idx == 635 )
+        //    int Break=0;
 		vec3 p_0 = line_points[seg_idx];
 		vec3 p_1 = line_points[seg_idx + 1];
         int cell_id = grid.GetCellIdx(p_0);
@@ -171,6 +173,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     }
     
     // TEMP debug view
+#if 0
     for( int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++ )
     {
         AttractorLineFramed new_framed;
@@ -186,9 +189,27 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
         }
         GenerateFrames(ref_framed);
     }
+#endif
     
-            // interpolate weights
+    // interpolate weights
 	// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
+    //AttractorLineFramed* new_framed = nullptr;
+    AttractorLineFramed new_framed;
+    snapped_lines.push_back(new_framed);
+    AttractorLineFramed& ref_framed = snapped_lines.Last();
+    float interp_len = 0.f;
+    for (int seg_idx = 0; seg_idx < nb_points-1; seg_idx++)
+    {
+        int bary_idx = grid.seg_bary_array[seg_idx];
+        SABarycenterRef& bary = grid.bary_points[bary_idx];
+        vec3 diff = bary.pos - line_points[seg_idx];
+        float len = length( diff );
+        diff /= len;
+        float delta_move = (len - interp_len) * 0.1f;
+        interp_len += delta_move;
+        ref_framed.points.push_back(line_points[seg_idx] + diff * interp_len);
+    }
+    GenerateFrames(ref_framed);
 
 	// compute positions and frames
 	//		- if first_leading_seg = me, push pos 
