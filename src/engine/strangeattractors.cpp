@@ -197,17 +197,32 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     AttractorLineFramed new_framed;
     snapped_lines.push_back(new_framed);
     AttractorLineFramed& ref_framed = snapped_lines.Last();
-    float interp_len = 0.f;
+    float interp_len = 0.f, t_bary;
+	vec3 interp_pos = nb_points ? line_points[0] : vec3(0.f, 0.f, 0.f);
     for (int seg_idx = 0; seg_idx < nb_points-1; seg_idx++)
     {
+		vec3 pos = line_points[seg_idx];
         int bary_idx = grid.seg_bary_array[seg_idx];
-        SABarycenterRef& bary = grid.bary_points[bary_idx];
-        vec3 diff = bary.pos - line_points[seg_idx];
-        float len = length( diff );
-        diff /= len;
-        float delta_move = (len - interp_len) * 0.1f;
-        interp_len += delta_move;
-        ref_framed.points.push_back(line_points[seg_idx] + diff * interp_len);
+        SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
+		SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
+		float sq_dist = intersect::SquaredDistancePointSegment(pos, bary_0.pos, bary_1.pos, t_bary);
+		float len = bigball::sqrt(sq_dist);
+		vec3 dir = (bary_0.pos * (1.f - t_bary) + bary_1.pos * t_bary) - pos;
+		dir /= len;
+
+		// project last interp pos onto dir, and slowly reach new length
+		interp_len = dot(interp_pos - pos, dir);
+		float delta_move = (len - interp_len) * 0.1f;
+		interp_len += delta_move;
+		interp_pos = pos + dir * interp_len;
+		ref_framed.points.push_back(interp_pos);
+
+        //vec3 diff = bary.pos - line_points[seg_idx];
+        //float len = length( diff );
+        //diff /= len;
+        //float delta_move = (len - interp_len) * 0.1f;
+        //interp_len += delta_move;
+        //ref_framed.points.push_back(line_points[seg_idx] + diff * interp_len);
     }
     GenerateFrames(ref_framed);
 
