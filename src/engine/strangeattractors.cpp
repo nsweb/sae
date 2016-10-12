@@ -120,19 +120,27 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
 		if (bary_idx != INDEX_NONE)
 		{
 			grid.seg_bary_array[seg_idx] = bary_idx;
-			SABarycenterRef& bary = grid.bary_points[bary_idx];
+			SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
+			SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
 
-			// project back bary pos onto segment
+			// project back bary_0 pos onto segment
 			float t_seg;
-			float sq_dist = SquaredDistancePointSegment_Unclamped(bary.pos, p_0, p_1, t_seg);
+			float sq_dist = SquaredDistancePointSegment_Unclamped(bary_0.pos, p_0, p_1, t_seg);
 			vec3 v_seg = p_0 * (1.f - t_seg) + p_1 * t_seg;
-			vec3 vec = v_seg - bary.pos;
+			vec3 vec = v_seg - bary_0.pos;
 
 			// moving average
 			//float ratio = (float)bary.weight / (float)(bary.weight + 1);
 			//bary.pos = bary.pos * ratio + new_pos / (float)(bary.weight + 1);
-			bary.pos = bary.pos + vec / (float)(bary.weight + 1);
-			bary.weight++;
+			bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
+			bary_0.weight++;
+
+			if (bary_1.is_last_in_chain)
+			{
+				// move next bary too if end of chain
+				bary_1.pos = bary_1.pos + vec / (float)(bary_1.weight + 1);
+				bary_1.weight++;
+			}
 		}
 		//  otherwise, create a new barycenter point / seg with current seg info (first_leading_seg = me, bary pos = seg pos, w = 1)
 		else
@@ -189,7 +197,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
         }
         GenerateFrames(ref_framed);
     }
-#endif
+#else
     
     // interpolate weights
 	// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
@@ -197,35 +205,48 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     AttractorLineFramed new_framed;
     snapped_lines.push_back(new_framed);
     AttractorLineFramed& ref_framed = snapped_lines.Last();
-    float interp_len = 0.f, t_bary;
+	int bary_counter = 0;
+	static int max_bary_counter = 100;
 	vec3 interp_pos = nb_points ? line_points[0] : vec3(0.f, 0.f, 0.f);
+	float last_sstep = 0.f;
+
     for (int seg_idx = 0; seg_idx < nb_points-1; seg_idx++)
     {
 		vec3 pos = line_points[seg_idx];
         int bary_idx = grid.seg_bary_array[seg_idx];
         SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
 		SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
-		float sq_dist = intersect::SquaredDistancePointSegment(pos, bary_0.pos, bary_1.pos, t_bary);
-		float len = bigball::sqrt(sq_dist);
-		vec3 dir = (bary_0.pos * (1.f - t_bary) + bary_1.pos * t_bary) - pos;
-		dir /= len;
+		
+		float t_bary;
+		float sq_dist = SquaredDistancePointSegment_Unclamped(pos, bary_0.pos, bary_1.pos, t_bary);
+		float len_to_bary = bigball::sqrt(sq_dist);
+		vec3 dir_to_bary = (bary_0.pos * (1.f - t_bary) + bary_1.pos * t_bary) - pos;
+		dir_to_bary /= len_to_bary;
 
-		// project last interp pos onto dir, and slowly reach new length
-		interp_len = dot(interp_pos - pos, dir);
-		float delta_move = (len - interp_len) * 0.1f;
-		interp_len += delta_move;
-		interp_pos = pos + dir * interp_len;
+		float sstep = smoothstep((float)bary_counter / (float)max_bary_counter);
+
+		// project last interp pos onto dir
+		float interp_len = dot(interp_pos - pos, dir_to_bary);
+		//float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
+		//interp_pos = pos + dir_to_bary * (dist_H * sstep);
+		float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
+		interp_pos = pos + dir_to_bary * (interp_len + dist_H * sstep);
+
 		ref_framed.points.push_back(interp_pos);
 
-        //vec3 diff = bary.pos - line_points[seg_idx];
-        //float len = length( diff );
-        //diff /= len;
-        //float delta_move = (len - interp_len) * 0.1f;
-        //interp_len += delta_move;
-        //ref_framed.points.push_back(line_points[seg_idx] + diff * interp_len);
+		if (bary_1.is_last_in_chain)
+		{
+			bary_counter = 0;
+			last_sstep = 0.f;
+		}
+		else
+		{
+			bary_counter++;
+			last_sstep = sstep;
+		}
     }
     GenerateFrames(ref_framed);
-
+#endif
 	// compute positions and frames
 	//		- if first_leading_seg = me, push pos 
 }
