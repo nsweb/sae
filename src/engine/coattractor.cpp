@@ -148,21 +148,24 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 		SAUtils::GenerateSolidMesh(m_snapped_lines, m_shape_params, m_tri_vertices, &m_tri_normals, &m_tri_colors, m_tri_indices);
 	}
     
-    vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
-    vec3 max_box(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    int32 num_vertices = m_tri_vertices.size();
-    for( int32 i = 0; i < num_vertices; i++ )
+    //if (m_shape_params.freeze_bbox)
     {
-        vec3 pos = m_tri_vertices[i];
-        min_box = min(min_box, pos);
-        max_box = max(max_box, pos);
+        vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
+        vec3 max_box(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+        int32 num_vertices = m_tri_vertices.size();
+        for( int32 i = 0; i < num_vertices; i++ )
+        {
+            vec3 pos = m_tri_vertices[i];
+            min_box = min(min_box, pos);
+            max_box = max(max_box, pos);
+        }
+        m_min_box = min_box;
+        m_max_box = max_box;
     }
-    m_min_box = min_box;
-    m_max_box = max_box;
     
     // Update transform
     const float scale = 0.01f;
-    const float z_offset = -min_box.z;
+    const float z_offset = -m_min_box.z;
     
     transform t;
     t.Set(quat(1.f), vec3(0.f, 0.f, z_offset) * scale, scale);

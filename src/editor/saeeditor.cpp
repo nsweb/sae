@@ -298,7 +298,9 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
 		ImGui::Separator();
 
-		ImGui::InputFloat("Target dimension", &attractor->m_line_params.target_dim);
+		//ImGui::Checkbox("Freeze bbox", &attractor->m_shape_params.freeze_bbox);
+        ImGui::Checkbox("Show bary", &attractor->m_shape_params.show_bary);
+        ImGui::InputFloat("Target dimension", &attractor->m_line_params.target_dim);
 		ImGui::SliderAngle("Shearing angle", &attractor->m_line_params.shearing_angle, -90.f, 90.f);
 		ImGui::InputFloat("Shearing scale x", &attractor->m_line_params.shearing_scale_x, 0.01f, 0.05f, 3);
 		ImGui::InputFloat("Shearing scale y", &attractor->m_line_params.shearing_scale_y, 0.01f, 0.05f, 3);

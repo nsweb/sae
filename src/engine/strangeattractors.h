@@ -437,6 +437,8 @@ struct AttractorShapeParams
 	bool weld_vertex;
 	bool snap_interp;
 	bool remove_line_ends;
+    //bool freeze_bbox;
+    bool show_bary;
 	//int32 merge_start;
 	//int32 merge_end;
 	int32 simplify_level;
@@ -451,6 +453,8 @@ struct AttractorShapeParams
 		weld_vertex(true),
 		snap_interp(false),
 		remove_line_ends(false),
+        //freeze_bbox(false),
+        show_bary(false),
 		//merge_start(0),
 		//merge_end(0),
 		simplify_level(1),
@@ -463,7 +467,7 @@ struct AttractorShapeParams
 
 	bool operator == (AttractorShapeParams& oth)
 	{
-		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && remove_line_ends == oth.remove_line_ends && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
+		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && remove_line_ends == oth.remove_line_ends && /*freeze_bbox == oth.freeze_bbox &&*/ show_bary == oth.show_bary && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
 			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist;
 	}
 };
