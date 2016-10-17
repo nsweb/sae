@@ -181,101 +181,110 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     }
     
     // TEMP debug view
-if( shape_params.show_bary )
-{
-    for (int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++)
-    {
-        AttractorLineFramed new_framed;
-        snapped_lines.push_back(new_framed);
-        AttractorLineFramed& ref_framed = snapped_lines.Last();
+	if( shape_params.show_bary )
+	{
+		for (int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++)
+		{
+			AttractorLineFramed new_framed;
+			snapped_lines.push_back(new_framed);
+			AttractorLineFramed& ref_framed = snapped_lines.Last();
         
-        int bary_idx = grid.bary_chains[chain_idx];
-        SABarycenterRef const* bary = &grid.bary_points[bary_idx];
-        while (!bary->is_last_in_chain)
-        {
-            ref_framed.points.push_back(bary->pos);
-            bary = &grid.bary_points[++bary_idx];
-        }
-        GenerateFrames(ref_framed);
-    }
-}
-else
-{
-    // interpolate weights
-    // 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
-    //AttractorLineFramed* new_framed = nullptr;
-    AttractorLineFramed new_framed;
-    snapped_lines.push_back(new_framed);
-    AttractorLineFramed& ref_framed = snapped_lines.Last();
-    int bary_counter = 0;
-    static int max_bary_counter = 30;
-    vec3 interp_pos = nb_points ? line_points[0] : vec3(0.f, 0.f, 0.f);
-    vec3 project_pos, dir_to_bary;
-    float inc = 1.f;
-    //float last_sstep = 0.f;
+			int bary_idx = grid.bary_chains[chain_idx];
+			SABarycenterRef const* bary;
+			do
+			{
+				bary = &grid.bary_points[bary_idx++];
+				ref_framed.points.push_back(bary->pos);
+			} 
+			while (!bary->is_last_in_chain);
+
+			if (ref_framed.points.size() < 4)
+			{
+				snapped_lines.pop_back();
+			}
+			else
+			{
+				GenerateFrames(ref_framed);
+			}
+		}
+	}
+	else
+	{
+		// interpolate weights
+		// 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
+		//AttractorLineFramed* new_framed = nullptr;
+		AttractorLineFramed new_framed;
+		snapped_lines.push_back(new_framed);
+		AttractorLineFramed& ref_framed = snapped_lines.Last();
+		int bary_counter = 0;
+		static int max_bary_counter = 30;
+		vec3 interp_pos = nb_points ? line_points[0] : vec3(0.f, 0.f, 0.f);
+		vec3 project_pos, dir_to_bary;
+		float inc = 1.f;
+		//float last_sstep = 0.f;
     
-    for (int seg_idx = 0; seg_idx < nb_points - 1; seg_idx++)
-    {
-        vec3 pos = line_points[seg_idx];
-        int bary_idx = grid.seg_bary_array[seg_idx];
-        SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
-        SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
+		for (int seg_idx = 0; seg_idx < nb_points - 1; seg_idx++)
+		{
+			vec3 pos = line_points[seg_idx];
+			int bary_idx = grid.seg_bary_array[seg_idx];
+			SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
+			SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
         
-        float t_bary;
-        float sq_dist = SquaredDistancePointSegment_Unclamped(pos, bary_0.pos, bary_1.pos, t_bary);
-        float len_to_bary = bigball::sqrt(sq_dist);
-        vec3 bary_proj = bary_0.pos * (1.f - t_bary) + bary_1.pos * t_bary;
-        //if (len_to_bary < 1e-3f)
-        //{
-        //    dir_to_bary = interp_pos - pos;
-        //}
-        //else
-        {
-            dir_to_bary = bary_proj - pos;
-            dir_to_bary /= len_to_bary;
-        }
-        //float sstep = smoothstep((float)bary_counter / (float)max_bary_counter);
+			float t_bary;
+			float sq_dist = SquaredDistancePointSegment_Unclamped(pos, bary_0.pos, bary_1.pos, t_bary);
+			float len_to_bary = bigball::sqrt(sq_dist);
+			vec3 bary_proj = bary_0.pos * (1.f - t_bary) + bary_1.pos * t_bary;
+			if (len_to_bary < 1e-3f)
+			{
+				interp_pos = pos;
+			}
+			else
+			{
+				dir_to_bary = bary_proj - pos;
+				dir_to_bary /= len_to_bary;
+
+				//float sstep = smoothstep((float)bary_counter / (float)max_bary_counter);
+
+				// project last interp pos onto dir
+				float interp_len = dot(interp_pos - pos, dir_to_bary);
+				project_pos = pos + dir_to_bary * interp_len;
+				float remaining_dist = len_to_bary - interp_len;
+				float current_t = (float)bary_counter / (float)max_bary_counter;
+				if (current_t == 0.f)
+				{
+					inc = remaining_dist / (float)max_bary_counter;;
+				}
+				if (current_t < 1.f)
+				{
+					//float dsstep = 6.f*current_t - 6.f*current_t*current_t;
+					interp_pos = project_pos + dir_to_bary * inc;//(remaining_dist * dsstep / (float)max_bary_counter);
+				}
+				else
+				{
+					interp_pos = bary_proj;
+				}
+
+				//float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
+				//interp_pos = pos + dir_to_bary * (dist_H * sstep);
+				//float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
+				//interp_pos = pos + dir_to_bary * (interp_len + dist_H * sstep);
+			}
         
-        // project last interp pos onto dir
-        float interp_len = dot(interp_pos - pos, dir_to_bary);
-        project_pos = pos + dir_to_bary * interp_len;
-        float remaining_dist = len_to_bary - interp_len;
-        float current_t = (float)bary_counter / (float)max_bary_counter;
-        if (current_t == 0.f)
-        {
-            inc = remaining_dist / (float)max_bary_counter;;
-        }
-        if (current_t < 1.f)
-        {
-            //float dsstep = 6.f*current_t - 6.f*current_t*current_t;
-            interp_pos = project_pos + dir_to_bary * inc;//(remaining_dist * dsstep / (float)max_bary_counter);
-        }
-        else
-        {
-            interp_pos = bary_proj;
-        }
+			ref_framed.points.push_back(interp_pos);
         
-        
-        //float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
-        //interp_pos = pos + dir_to_bary * (dist_H * sstep);
-        //float dist_H = (len_to_bary - interp_len) / (1.f - last_sstep);
-        //interp_pos = pos + dir_to_bary * (interp_len + dist_H * sstep);
-        
-        ref_framed.points.push_back(interp_pos);
-        
-        if (bary_1.is_last_in_chain)
-        {
-            bary_counter = 0;
-            //last_sstep = 0.f;
-        }
-        else
-        {
-            bary_counter++;
-            //last_sstep = sstep;
-        }
-    }
-    GenerateFrames(ref_framed);
-}
+			if (bary_1.is_last_in_chain)
+			{
+				bary_counter = 0;
+				//last_sstep = 0.f;
+			}
+			else
+			{
+				bary_counter++;
+				//last_sstep = sstep;
+			}
+		}
+		GenerateFrames(ref_framed);
+	}
     // compute positions and frames
     //		- if first_leading_seg = me, push pos
 }
