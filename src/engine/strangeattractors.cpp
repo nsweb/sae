@@ -272,7 +272,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
         
 			ref_framed.points.push_back(interp_pos);
         
-			if (bary_1.is_last_in_chain)
+			if (bary_1.is_last_in_chain || bary_0.weight != bary_1.weight)
 			{
 				bary_counter = 0;
 				//last_sstep = 0.f;
