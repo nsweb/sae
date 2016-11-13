@@ -2,6 +2,11 @@
 #ifndef SAESTRANGEATTRACTORS_H
 #define SAESTRANGEATTRACTORS_H
 
+namespace bigball
+{
+    class Archive;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 enum eAttractorType
@@ -447,6 +452,8 @@ struct AttractorShapeParams
 	float crease_width;
 	float crease_bevel;
 	float merge_dist;
+    float max_drift;
+    int32 target_bary_offset;
 
 	AttractorShapeParams() :
 		fatness_scale(1.0f),
@@ -462,14 +469,19 @@ struct AttractorShapeParams
 		crease_depth(0.0f),
 		crease_width(0.0f),
 		crease_bevel(0.0f),
-		merge_dist(0.f)
+		merge_dist(0.f),
+        max_drift(0.02f),
+        target_bary_offset(10)
 	{}
 
 	bool operator == (AttractorShapeParams& oth)
 	{
 		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && remove_line_ends == oth.remove_line_ends && /*freeze_bbox == oth.freeze_bbox &&*/ show_bary == oth.show_bary && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
-			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist;
+			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist
+            && max_drift == oth.max_drift && target_bary_offset == oth.target_bary_offset;
 	}
+    
+    void Serialize(class Archive& file);
 };
 
 struct AttractorHandle
@@ -582,6 +594,7 @@ struct AttractorLineFramed
 	Array<vec3>		points;
 	Array<quat>		frames;
 	Array<float>    follow_angles;
+    Array<float>    colors;
 	ivec4			snap_ranges;
 };
 
@@ -599,6 +612,12 @@ struct SACell
     Array<int> barys;
 };
 
+struct SABaryResult
+{
+    int cell_id;
+    int bary_in_array_idx;
+};
+
 struct SAGrid
 {
     Array<SACell> cells;
@@ -613,8 +632,9 @@ struct SAGrid
     
     void InitGrid(const Array<vec3>& line_points, int max_cell);
     int GetCellIdx(vec3 p) const;
-    int FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist);
-    
+    SABaryResult FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist);
+    void MoveBary(SABaryResult const& bary_ref, vec3 bary_pos, int bary_idx);
+    void MoveBary(vec3 old_bary_pos, vec3 bary_pos, int bary_idx);
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -629,6 +649,7 @@ namespace SAUtils
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
+    void        GenerateColors(AttractorLineFramed& line_framed, float color);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
     void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);

@@ -105,6 +105,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 
 		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_framed.points);
 		SAUtils::GenerateFrames(m_line_framed);
+        SAUtils::GenerateColors(m_line_framed, 0.f);
 		m_line_framed.SetDefaultRanges();
 		if (!keep_handle)
 			cohandle->m_handles.clear();
@@ -286,7 +287,8 @@ void CoAttractor::_Render( RenderContext& render_ctxt )
 void CoAttractor::Serialize(Archive& file)
 {
     file.SerializeRaw(m_cached_line_params);
-    file.SerializeRaw(m_cached_shape_params);
+    m_cached_shape_params.Serialize(file);
+    //file.SerializeRaw(m_cached_shape_params);
  
     eAttractorType type;
     if(file.IsReading())

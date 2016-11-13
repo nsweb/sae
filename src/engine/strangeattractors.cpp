@@ -96,7 +96,7 @@ static float SquaredDistancePointSegment_Unclamped(vec3 const& point, vec3 const
 
 void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
-    BB_LOG(SAUtils, Log, "MergeLinePoints2\n");
+    BB_LOG(SAUtils, Log, "MergeLinePoints3\n");
     
     // New algo with barycenters
     SAGrid grid;
@@ -114,11 +114,14 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
         vec3 p_0 = line_points[seg_idx];
         vec3 p_1 = line_points[seg_idx + 1];
         int cell_id = grid.GetCellIdx(p_0);
-        int bary_idx = grid.FindBaryCenterSeg(seg_idx, p_0, /*line_points[seg_idx + 1],*/ shape_params.merge_dist);
+        SABaryResult found_bary = grid.FindBaryCenterSeg(seg_idx, p_0, /*line_points[seg_idx + 1],*/ shape_params.merge_dist);
         
         //  if it exists, point to it (seg_bary_array) and update barycenter point info with weighted average(pos + w)
-        if (bary_idx != INDEX_NONE)
+        if (found_bary.bary_in_array_idx != INDEX_NONE)
         {
+            SACell const& bary_cell = grid.cells[found_bary.cell_id];
+            int bary_idx = bary_cell.barys[found_bary.bary_in_array_idx];
+            
             grid.seg_bary_array[seg_idx] = bary_idx;
             SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
             SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
@@ -135,11 +138,18 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
             bary_0.weight++;
             
+            //TODO: backtrack to see if seg-1 / seg-2 is not snapped on same bary line, but seg-2 / seg-3 is, in which case we force contuinity of snapping 
+            
+            grid.MoveBary(found_bary, bary_0.pos, bary_idx);
+            
             if (bary_1.is_last_in_chain)
             {
                 // move next bary too if end of chain
+                vec3 prev_bary_1_pos = bary_1.pos;
                 bary_1.pos = bary_1.pos + vec / (float)(bary_1.weight + 1);
                 bary_1.weight++;
+                
+                grid.MoveBary(prev_bary_1_pos, bary_1.pos, bary_idx + 1);
             }
         }
         //  otherwise, create a new barycenter point / seg with current seg info (first_leading_seg = me, bary pos = seg pos, w = 1)
@@ -195,6 +205,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             {
                 bary = &grid.bary_points[bary_idx++];
                 ref_framed.points.push_back(bary->pos);
+                ref_framed.colors.push_back((float)bary->weight);
             }
             while (!bary->is_last_in_chain);
             
@@ -226,6 +237,8 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
         vec3 previous_interp_pos = line_points[0];
         vec3 previous_interp_dir = normalize(line_points[1] - line_points[0]);
         vec3 previous_dir_to_bary = orthogonal(previous_interp_dir);
+        vec3 previous_seg_dir = previous_interp_dir;
+        quat previous_seg_quat = quat(1.f);
         ref_framed.points.push_back(previous_interp_pos);
         
         for (int seg_idx = 1; seg_idx < nb_points - 1; seg_idx++)
@@ -236,9 +249,15 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             float seg_len = length(seg_dir);
             seg_dir /= seg_len;
             
+            quat seg_quat = quat::rotate(previous_seg_dir, seg_dir);
+            
             int bary_idx = grid.seg_bary_array[seg_idx];
             SABarycenterRef& bary_0 = grid.bary_points[bary_idx];
             SABarycenterRef& bary_1 = grid.bary_points[bary_idx + 1];
+            
+            int target_seg_idx = bigball::min( seg_idx + shape_params.target_bary_offset, nb_points - 2 );
+            int target_bary_idx = grid.seg_bary_array[target_seg_idx];
+            SABarycenterRef& bary_t = grid.bary_points[target_bary_idx];
             
             float t_bary;
             float sq_dist = SquaredDistancePointSegment_Unclamped(pt, bary_0.pos, bary_1.pos, t_bary);
@@ -259,7 +278,9 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             vec3 plane_dir = cross(left_dir, dir_to_bary);
             
             // extrapolate pos from previous_interp_dir
-            float project_dist = intersect::RayPlaneIntersection(previous_interp_pos, previous_interp_dir, pt, plane_dir);
+            // fix dir by following seg curve rotation
+            vec3 ray_dir = /*shape_params.show_bary ? previous_interp_dir :*/ previous_seg_quat.transform(previous_interp_dir);
+            float project_dist = intersect::RayPlaneIntersection(previous_interp_pos, ray_dir, pt, plane_dir);
             
             // compare against avg dist between points, clamp dist as we can move -50% <-> +50%
             float move_dist = bigball::clamp(project_dist, seg_len * 0.5f, seg_len * 1.5f);
@@ -270,22 +291,33 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             // compute interp_pos by drifting project_pos towards bary_proj by small amount
             vec3 interp_pos = project_pos;
             
-            vec3 drift_dir = bary_proj - project_pos;
+            vec3 drift_dir;
+//if(shape_params.show_bary)
+//            drift_dir = bary_proj - project_pos;
+//else
+{
+            vec3 target_dir = bary_t.pos - project_pos;
+            float dist_target = dot( ray_dir, target_dir );
+            drift_dir = target_dir - (ray_dir * dist_target);
+}
             float drift_len = length(drift_dir);
             if( drift_len > 1e-3f)
             {
                 drift_dir /= drift_len;
-            
-                static float max_drift = 0.02f;
+                
+                const float max_drift = shape_params.max_drift;// 0.01f;
                 drift_len = bigball::clamp(drift_len, -max_drift, max_drift);
                 interp_pos += drift_dir * drift_len;
             }
             
             ref_framed.points.push_back(interp_pos);
+            ref_framed.colors.push_back((float)0.f);
             
             previous_dir_to_bary = dir_to_bary;
             previous_interp_dir = normalize(interp_pos - previous_interp_pos);
             previous_interp_pos = interp_pos;
+            previous_seg_dir = seg_dir;
+            previous_seg_quat = seg_quat;
         }
         
 #if OLD_CODE
@@ -1104,6 +1136,16 @@ void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines,
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
+void SAUtils::GenerateColors(AttractorLineFramed& line_framed, float color)
+{
+    int32 nb_points = line_framed.points.size();
+    line_framed.colors.resize(nb_points);
+    for (int32 i = 0; i < nb_points; i++)
+    {
+        line_framed.colors[i] = color;
+    }
+}
+
 void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
@@ -1238,6 +1280,7 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
 void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, const AttractorShapeParams& params)
 {
     const Array<vec3>& line_points = line_framed.points;
+    const Array<float>& colors = line_framed.colors;
     const Array<quat>& frames = line_framed.frames;
     const Array<float>& follow_angles = line_framed.follow_angles;
     
@@ -1255,11 +1298,11 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
         vec3 vy = mat.v1;   // UP
         vec3 vz = mat.v2;   // RIGHT
         
-        float color = 0.f;
-        if (i < line_framed.snap_ranges.y) // snap out
-            color = lerp(-1.f, 0.f, float(i - line_framed.snap_ranges.x) / float(line_framed.snap_ranges.y - line_framed.snap_ranges.x));
-        else if (i >= line_framed.snap_ranges.z) // snap in
-            color = lerp(0.f, 1.f, float(i - line_framed.snap_ranges.z) / float(line_framed.snap_ranges.w - line_framed.snap_ranges.z));
+        float color = colors[i];
+        //if (i < line_framed.snap_ranges.y) // snap out
+        //    color = lerp(-1.f, 0.f, float(i - line_framed.snap_ranges.x) / float(line_framed.snap_ranges.y - line_framed.snap_ranges.x));
+        //else if (i >= line_framed.snap_ranges.z) // snap in
+        //    color = lerp(0.f, 1.f, float(i - line_framed.snap_ranges.z) / float(line_framed.snap_ranges.w - line_framed.snap_ranges.z));
         
         P_prev = line_points[i - 1];
         P_current = line_points[i];
@@ -1864,7 +1907,7 @@ void SAGrid::InitGrid(const Array<vec3>& line_points, int max_cell)
     }
 }
 
-int SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist)
+SABaryResult SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist)
 {
     //Array<SACell> cells;
     //Array<SABarycenterRef> bary_points;
@@ -1883,7 +1926,8 @@ int SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dis
     const float sq_max_dist = max_dist * max_dist;
     
     // search 3x3x3 cells in neighborhood
-    int min_bary_idx = INDEX_NONE;
+    SABaryResult found_bary = { INDEX_NONE, INDEX_NONE };
+    //int min_bary_idx = INDEX_NONE;
     float sq_min_dist = sq_max_dist;
     
     for (int z = k0; z <= k1; z++)
@@ -1910,7 +1954,8 @@ int SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dis
                         if (t_seg >= 0.f && t_seg < 1.f)
                         {
                             sq_min_dist = sq_dist;
-                            min_bary_idx = bary_idx;
+                            found_bary.cell_id = cell_id;
+                            found_bary.bary_in_array_idx = bary_it;
                         }
                     }
                 }
@@ -1918,7 +1963,28 @@ int SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dis
         }
     }
     
-    return min_bary_idx;
+    return found_bary;
+}
+
+void SAGrid::MoveBary(SABaryResult const& bary_ref, vec3 bary_pos, int bary_idx)
+{
+    int new_bary_cell_id = GetCellIdx(bary_pos);
+    if (new_bary_cell_id != bary_ref.cell_id)
+    {
+        cells[bary_ref.cell_id].barys.erase(bary_ref.bary_in_array_idx);
+        cells[new_bary_cell_id].barys.push_back(bary_idx);
+    }
+}
+
+void SAGrid::MoveBary(vec3 old_bary_pos, vec3 bary_pos, int bary_idx)
+{
+    int old_bary_cell_id = GetCellIdx(old_bary_pos);
+    int new_bary_cell_id = GetCellIdx(bary_pos);
+    if (new_bary_cell_id != old_bary_cell_id)
+    {
+        cells[old_bary_cell_id].barys.remove(bary_idx);
+        cells[new_bary_cell_id].barys.push_back(bary_idx);
+    }
 }
 
 int SAGrid::GetCellIdx(vec3 p) const
@@ -1928,5 +1994,11 @@ int SAGrid::GetCellIdx(vec3 p) const
     int k = (int)((p.z - grid_bound.min.z) / cell_unit);
     int cell_id = i + grid_dim.x * j + grid_dim.x * grid_dim.y * k;
     return cell_id;
+}
+
+void AttractorShapeParams::Serialize(Archive& file)
+{
+    int32 size = (int32)((int8*)&max_drift - (int8*)this);
+    file.Serialize( this, size );
 }
 

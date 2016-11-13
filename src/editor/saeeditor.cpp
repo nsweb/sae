@@ -295,6 +295,8 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Crease depth", &attractor->m_shape_params.crease_depth);
 		ImGui::InputFloat("Crease width", &attractor->m_shape_params.crease_width);
 		ImGui::InputFloat("crease bevel", &attractor->m_shape_params.crease_bevel);
+        ImGui::InputFloat("max drift", &attractor->m_shape_params.max_drift);
+        ImGui::InputInt("target bary offset", &attractor->m_shape_params.target_bary_offset, 1, 20);
 
 		ImGui::Separator();
 

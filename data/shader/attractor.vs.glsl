@@ -34,7 +34,7 @@ void main(void)
 		if( color < 0. )
 			rgb_col = mix( vec3(1., 1., 1.), vec3(1., 0., 0.), 1. - color );
 		else if( color > 0. )
-			rgb_col = mix( vec3(1., 1., 1.), vec3(0., 0., 1.), color );
+			rgb_col = mix( vec3(1., 0., 0.), vec3(0., 0., 1.), color / 4.f );
 		vs_fs_color = vec4( rgb_col, color_info.z);
 	}
 }
