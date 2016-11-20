@@ -604,6 +604,7 @@ struct SABarycenterRef
     vec3 pos;
     int16 weight;
 	int16 is_last_in_chain;
+    Array<int32> seg_refs;
 };
 
 struct SACell

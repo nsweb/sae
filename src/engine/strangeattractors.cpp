@@ -94,6 +94,19 @@ static float SquaredDistancePointSegment_Unclamped(vec3 const& point, vec3 const
     return dot(V_seg0, V_seg0);
 }
 
+static void PrintBary(SABarycenterRef const* bary, int32 bary_idx, float dist)
+{
+    String str_debug;
+    str_debug = String::Printf("bary [%d][%.2f]", bary_idx, dist);
+    for( int32 s_idx = 0; s_idx < bary->seg_refs.size(); s_idx++)
+    {
+        int32 seg_ref = bary->seg_refs[s_idx];
+        str_debug += String::Printf(" %d", seg_ref);
+    }
+    str_debug += "\n";
+    BB_LOG(SAUtils, Log, str_debug.c_str());
+}
+
 void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints3\n");
@@ -133,21 +146,41 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             vec3 vec = v_seg - bary_0.pos;
             
             // moving average
-            //float ratio = (float)bary.weight / (float)(bary.weight + 1);
-            //bary.pos = bary.pos * ratio + new_pos / (float)(bary.weight + 1);
-            bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
-            bary_0.weight++;
             
-            //TODO: backtrack to see if seg-1 / seg-2 is not snapped on same bary line, but seg-2 / seg-3 is, in which case we force contuinity of snapping 
+            bool move_bary = true;
+            /*for( int32 s_idx = 0; s_idx < bary_0.seg_refs.size(); s_idx++)
+            {
+                int32 seg_ref = bary_0.seg_refs[s_idx];
+                if( seg_ref >= seg_idx - 10 && seg_ref <= seg_idx + 10 )
+                {
+                    move_bary = false;
+                }
+            }*/
+            
+            //if(move_bary)
+            {
+                bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
+                bary_0.weight++;
+                bary_0.seg_refs.push_back(seg_idx);
+            }
+            
+            //TODO: backtrack to see if seg-1 / seg-2 is not snapped on same bary line, but seg-2 / seg-3 is, in which case we force contuinity of snapping
+            //if( seg_idx > 3)
+            //{
+            //    int32 p_b_1 = grid.seg_bary_array[seg_idx - 1];
+            //    int32 p_b_2 = grid.seg_bary_array[seg_idx - 2];
+                //if( p)
+            //}
             
             grid.MoveBary(found_bary, bary_0.pos, bary_idx);
             
-            if (bary_1.is_last_in_chain)
+            if (/*move_bary &&*/ bary_1.is_last_in_chain)
             {
                 // move next bary too if end of chain
                 vec3 prev_bary_1_pos = bary_1.pos;
                 bary_1.pos = bary_1.pos + vec / (float)(bary_1.weight + 1);
                 bary_1.weight++;
+                //bary_1.seg_refs.push_back(seg_idx);
                 
                 grid.MoveBary(prev_bary_1_pos, bary_1.pos, bary_idx + 1);
             }
@@ -166,6 +199,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             {
                 // continuing previous chain
                 prev_bary->is_last_in_chain = 0;
+                prev_bary->seg_refs.push_back(seg_idx);
                 grid.seg_bary_array[seg_idx] = nb_bary - 1;
                 
                 SABarycenterRef new_bary_1 = { seg_idx + 1, p_1, 1 /*weight*/, 1 /*is_last_in_chain*/ };
@@ -177,6 +211,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             {
                 // start new chain
                 SABarycenterRef new_bary_0 = { seg_idx, p_0, 1 /*weight*/, 0 /*is_last_in_chain*/ };
+                new_bary_0.seg_refs.push_back(seg_idx);
                 grid.bary_points.push_back(new_bary_0);
                 grid.bary_chains.push_back(nb_bary);
                 grid.cells[cell_id].barys.push_back(nb_bary);
@@ -187,6 +222,53 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
                 int new_cell_id = grid.GetCellIdx(p_1);
                 grid.cells[new_cell_id].barys.push_back(nb_bary + 1);
             }
+        }
+    }
+    
+    // TEMP
+    {
+        for (int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++)
+        {
+            int bary_idx = grid.bary_chains[chain_idx];
+            vec3 prev_pos = grid.bary_points[bary_idx].pos;
+            float prev2_dist = 0.f;
+            float prev_dist = 0.f;
+            int print_next = 0;
+            
+            SABarycenterRef const* prev2_bary = nullptr;
+            SABarycenterRef const* prev_bary = nullptr;
+            SABarycenterRef const* bary;
+            do
+            {
+                bary = &grid.bary_points[bary_idx++];
+                vec3 pos = bary->pos;
+                float dist = distance(prev_pos, pos);
+                if( prev_dist > 0.f && dist > 5.f * prev_dist)
+                {
+                    if(prev2_bary)
+                        PrintBary(prev2_bary, bary_idx - 2, prev2_dist);
+                    if(prev_bary)
+                        PrintBary(prev_bary, bary_idx - 1, prev_dist);
+                    PrintBary(bary, bary_idx, dist);
+                    print_next = 2;
+                }
+                else if(print_next)
+                {
+                    PrintBary(bary, bary_idx, dist);
+                    print_next--;
+                    if(!print_next)
+                        BB_LOG(SAUtils, Log, "\n");
+                }
+                
+                prev2_dist = prev_dist;
+                prev_dist = dist;
+                prev_pos = pos;
+                prev2_bary = prev_bary;
+                prev_bary = bary;
+            }
+            while (!bary->is_last_in_chain);
+            
+            BB_LOG(SAUtils, Log, "Chain %d stops with bary %d\n", chain_idx, bary_idx);
         }
     }
     
