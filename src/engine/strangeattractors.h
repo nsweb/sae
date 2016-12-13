@@ -634,6 +634,7 @@ struct SAGrid
     void InitGrid(const Array<vec3>& line_points, int max_cell);
     int GetCellIdx(vec3 p) const;
     SABaryResult FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist);
+    int FindSegInRange(int bary_idx, int seg_idx, int range);
     void MoveBary(SABaryResult const& bary_ref, vec3 bary_pos, int bary_idx);
     void MoveBary(vec3 old_bary_pos, vec3 bary_pos, int bary_idx);
 };
@@ -654,6 +655,7 @@ namespace SAUtils
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
     void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+    void		MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);

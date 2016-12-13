@@ -107,6 +107,28 @@ static void PrintBary(SABarycenterRef const* bary, int32 bary_idx, float dist)
     BB_LOG(SAUtils, Log, str_debug.c_str());
 }
 
+void SAUtils::MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+{
+    BB_LOG(SAUtils, Log, "MergeLinePoints4\n");
+    
+    // New algo (force based)
+    
+    // 1- sort every line point into a grid
+    
+    // 2- parse every point and find out if it has neighbours <= merge_dist range
+    //    move_factor : mark 0.0 if no neighbours, 1.0 otherwise
+    
+    // 3- interpolate and propagate move_factor 1.0 1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+    
+    // 4- loop for n pass:
+        // 4.1- for each point with factor == 1.0, accumulate influences from nearest points (scattered data interpolation), then move by maximum distance between two points
+        // 4.2- relaxation step: move midway from immediate neighbors (-1 +1), curve fitting from (-2 +2)
+        //      points with move_factor < 1 resist change
+    
+    
+    
+}
+
 void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints3\n");
@@ -148,33 +170,58 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
             // moving average
             
             bool move_bary = true;
-            /*for( int32 s_idx = 0; s_idx < bary_0.seg_refs.size(); s_idx++)
+            for( int32 s_idx = 0; s_idx < bary_0.seg_refs.size(); s_idx++)
             {
                 int32 seg_ref = bary_0.seg_refs[s_idx];
-                if( seg_ref >= seg_idx - 10 && seg_ref <= seg_idx + 10 )
+                if( seg_ref >= seg_idx - 5 && seg_ref <= seg_idx + 5 )
                 {
                     move_bary = false;
+                    break;
                 }
-            }*/
-            
-            //if(move_bary)
+            }
+            if (!move_bary)
             {
-                bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
-                bary_0.weight++;
                 bary_0.seg_refs.push_back(seg_idx);
+                continue;
             }
             
-            //TODO: backtrack to see if seg-1 / seg-2 is not snapped on same bary line, but seg-2 / seg-3 is, in which case we force contuinity of snapping
-            //if( seg_idx > 3)
-            //{
-            //    int32 p_b_1 = grid.seg_bary_array[seg_idx - 1];
-            //    int32 p_b_2 = grid.seg_bary_array[seg_idx - 2];
-                //if( p)
-            //}
+            bary_0.pos = bary_0.pos + vec / (float)(bary_0.weight + 1);
+            bary_0.weight++;
+            bary_0.seg_refs.push_back(seg_idx);
             
             grid.MoveBary(found_bary, bary_0.pos, bary_idx);
             
-            if (/*move_bary &&*/ bary_1.is_last_in_chain)
+            //TODO: backtrack to see if seg-1 / seg-2 is not snapped on same bary line, but seg-2 / seg-3 is, in which case we force contuinity of snapping
+            if( bary_idx > 1)
+            {
+                //int32 p_b_m1 = grid.seg_bary_array[seg_idx - 1];
+                //int32 p_b_m2 = grid.seg_bary_array[seg_idx - 2];
+                int32 seg_idx_m2;
+                if( INDEX_NONE == grid.FindSegInRange(bary_idx - 1, seg_idx - 1, 2) && INDEX_NONE != (seg_idx_m2 = grid.FindSegInRange(bary_idx - 2 , seg_idx - 2, 2)))
+                {
+                    int seg_mid = (seg_idx_m2 + seg_idx) / 2;
+                    SABarycenterRef& bary_m1 = grid.bary_points[bary_idx - 1];
+                    
+                    vec3 p_m0 = line_points[seg_mid];
+                    vec3 p_m1 = line_points[seg_mid + 1];
+
+                    // project back bary_m1 pos onto segment
+                    float t_seg_m1;
+                    SquaredDistancePointSegment_Unclamped(bary_m1.pos, p_m0, p_m1, t_seg_m1);
+                    vec3 v_seg_m = p_m0 * (1.f - t_seg_m1) + p_m1 * t_seg_m1;
+                    vec3 vec_m = v_seg_m - bary_m1.pos;
+                    
+                    vec3 prev_bary_m1_pos = bary_m1.pos;
+                    bary_m1.pos = bary_m1.pos + vec / (float)(bary_m1.weight + 1);
+                    bary_m1.weight++;
+                    bary_m1.seg_refs.push_back(seg_mid);
+                    grid.MoveBary(prev_bary_m1_pos, bary_m1.pos, bary_idx - 1);
+                }
+            }
+            
+            //grid.MoveBary(found_bary, bary_0.pos, bary_idx);
+            
+            if (bary_1.is_last_in_chain)
             {
                 // move next bary too if end of chain
                 vec3 prev_bary_1_pos = bary_1.pos;
@@ -2046,6 +2093,22 @@ SABaryResult SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, floa
     }
     
     return found_bary;
+}
+
+int32 SAGrid::FindSegInRange(int32 bary_idx, int32 seg_idx, int32 range)
+{
+    SABarycenterRef const& bary = bary_points[bary_idx];
+    
+    int32 found_idx = INDEX_NONE;
+    for( int32 s_idx = 0; s_idx < bary.seg_refs.size(); s_idx++)
+    {
+        int32 seg_ref = bary.seg_refs[s_idx];
+        if( seg_ref >= seg_idx - range && seg_ref <= seg_idx + range )
+        {
+            found_idx = max(found_idx, seg_ref);
+        }
+    }
+    return found_idx;
 }
 
 void SAGrid::MoveBary(SABaryResult const& bary_ref, vec3 bary_pos, int bary_idx)
