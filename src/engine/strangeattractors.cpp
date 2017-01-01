@@ -3,6 +3,7 @@
 #include "strangeattractors.h"
 #include "system/file.h"
 #include "math/intersections.h"
+#include "math/splines.h"
 
 
 void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points)
@@ -112,21 +113,131 @@ void SAUtils::MergeLinePoints4(AttractorLineFramed const& line_framed, const Arr
     BB_LOG(SAUtils, Log, "MergeLinePoints4\n");
     
     // New algo (force based)
+    Array<vec3> line_points = line_framed.points;
+    float avg_pt_separation = 0.f;
+    {
+        int max_pt = max(100, line_points.size() - 1);
+        for (int i = 0; i < max_pt; i++)
+        {
+            float d = distance(line_points[i], line_points[i  + 1]);
+            avg_pt_separation += d;
+        }
+        avg_pt_separation /= (float)max_pt;
+    }
     
     // 1- sort every line point into a grid
+    SAGrid grid;
+    grid.InitGrid(line_framed.points, 1000);
     
     // 2- parse every point and find out if it has neighbours <= merge_dist range
     //    move_factor : mark 0.0 if no neighbours, 1.0 otherwise
+    Array<float> move_factors;
+    const int nb_points = line_points.size();
+    move_factors.resize(nb_points, 0.f);
     
-    // 3- interpolate and propagate move_factor 1.0 1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+    const int interp_range = 40;
     
-    // 4- loop for n pass:
-        // 4.1- for each point with factor == 1.0, accumulate influences from nearest points (scattered data interpolation), then move by maximum distance between two points
-        // 4.2- relaxation step: move midway from immediate neighbors (-1 +1), curve fitting from (-2 +2)
-        //      points with move_factor < 1 resist change
+if(!shape_params.show_bary)
+{
+    const int max_pass = shape_params.max_iter_count;
+    for(int pass_idx = 0; pass_idx < max_pass; pass_idx++)
+    {
+        bool first_pass = (pass_idx == 0 ? true : false);
+        for (int pt_idx = 0; pt_idx < nb_points; pt_idx++)
+        {
+            if(!first_pass && move_factors[pt_idx] < 1.0f)
+                continue;
+            
+            SASegResult found_seg = grid.FindNearestSeg(pt_idx, line_points, shape_params.merge_dist, interp_range);
+            if (found_seg.cell_id != INDEX_NONE)
+            {
+                SACell const& seg_cell = grid.cells[found_seg.cell_id];
+                int seg_idx = seg_cell.segs[found_seg.seg_in_array_idx];
+                vec3 seg_0 = line_points[seg_idx];
+                vec3 seg_1 = line_points[seg_idx + 1];
+                float dist = sqrt(found_seg.sq_dist);
+                if( dist < 1e-4f )
+                    continue;
+                vec3 seg_p = seg_0 * (1.f - found_seg.t_seg) + seg_1 * found_seg.t_seg;
+                vec3 p_0 = line_points[pt_idx];
+                vec3 dir_seg = (seg_p - p_0) / dist;
+                float push_dist = min( dist, avg_pt_separation );
+                vec3 new_pos = p_0 + dir_seg * push_dist;
+                line_points[pt_idx] = new_pos;
+                
+                grid.MovePoint(p_0, new_pos, pt_idx);
+                
+                move_factors[pt_idx] = 1.0f;
+            }
+        }
+
+        // 3- interpolate and propagate move_factor 1.0 1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+        if (first_pass)
+        {
+            int last_idx = INDEX_NONE;
+            for (int pt_idx = 0; pt_idx < nb_points; pt_idx++)
+            {
+                if(move_factors[pt_idx] == 1.f)
+                    last_idx = pt_idx;
+                else
+                {
+                    if(pt_idx - last_idx < interp_range)
+                        move_factors[pt_idx] = 1.f - (pt_idx - last_idx) / interp_range;
+                }
+            }
+            last_idx = INDEX_NONE;
+            for (int pt_idx = nb_points - 1; pt_idx >= 0 ; pt_idx--)
+            {
+                if(move_factors[pt_idx] == 1.f)
+                    last_idx = pt_idx;
+                else
+                {
+                    if(last_idx - pt_idx < interp_range)
+                        move_factors[pt_idx] = max(move_factors[pt_idx], 1.f - (last_idx - pt_idx) / interp_range);
+                }
+            }
+        }
+        
+        // relaxation step: move midway from immediate neighbors (-1 +1), curve fitting from (-2 +2)
+        CubicSpline spline;
+        for (int pt_idx = 6; pt_idx < nb_points - 6; pt_idx++)
+        {
+            if(move_factors[pt_idx] < 1.f)
+                continue;
+            
+            vec3 p_0 = line_points[pt_idx - 6];
+            vec3 p_1 = line_points[pt_idx - 3];
+            vec3 p_2 = line_points[pt_idx + 3];
+            vec3 p_3 = line_points[pt_idx + 6];
+            
+            float dt_0 = bigball::pow(bigball::sqlength(p_0 - p_1), 0.25f);
+            float dt_1 = bigball::pow(bigball::sqlength(p_1 - p_2), 0.25f);
+            float dt_2 = bigball::pow(bigball::sqlength(p_2 - p_3), 0.25f);
+            
+            // safety check for repeated points
+            if (dt_1 < 1e-4f)    dt_1 = 1.0f;
+            if (dt_0 < 1e-4f)    dt_0 = dt_1;
+            if (dt_2 < 1e-4f)    dt_2 = dt_1;
+            
+            spline.InitNonuniformCatmullRom(p_0, p_1, p_2, p_3, dt_0, dt_1, dt_2);
+            vec3 s_pos, s_tan;
+            spline.Eval(0.5f, s_pos, s_tan);
+            
+            // move halfway toward spline pos
+            line_points[pt_idx] = (s_pos + line_points[pt_idx]) * 0.5f;
+        }
+        
+    }
+}
     
+    AttractorLineFramed new_framed;
+    snapped_lines.push_back(new_framed);
+    AttractorLineFramed& ref_framed = snapped_lines.Last();
     
-    
+    ref_framed.points = line_points;
+    ref_framed.colors.resize(nb_points, 0.f);
+
+    GenerateFrames(ref_framed);
 }
 
 void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
@@ -1550,16 +1661,6 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
     }
 }
 
-void SAUtils::GenerateTriIndices(Array<AttractorShape>& vShapes, int32 num_local_points)
-{
-    // Generate tri index
-    for (int32 ShapeIdx = 0; ShapeIdx < vShapes.size(); ShapeIdx++)
-    {
-        AttractorShape& S = vShapes[ShapeIdx];
-        GenerateTriIndices(S.tri_vertices, num_local_points, S.tri_indices, true/*bWeldVertex*/, 0/*base_vertex*/);
-    }
-}
-
 void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_local_points, Array<int32>& tri_indices, const bool bWeldVertex, int32 base_vertex)
 {
     // Generate tri index
@@ -1645,36 +1746,34 @@ void SAUtils::GenerateTriIndices(const Array<vec3>& tri_vertices, int32 num_loca
     }
 }
 
-void SAUtils::WriteObjFile(const char* filename, Array<vec3>& vPos, Array<int32>& tri_indices)
+void SAUtils::WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices )
 {
-    File fp;
-    if (!fp.Open(filename, true))
-        return;
-    
+    const char* filename = "strange attractor";
     String tmp_str;
     tmp_str = String::Printf("#\n# %s\n#\n\n", filename);
-    fp.SerializeString(tmp_str);
+    file.SerializeString(tmp_str);
     //fopen_s( &fp, filename, "wt" );
     //fprintf( fp, "#\n# %s\n#\n\n", filename );
     
-    int32 i, nPart = vPos.size(), nTri = tri_indices.size() / 3;
-    for (i = 0; i < nPart; ++i)
+    int32 i, num_points = tri_vertices.size(), num_tri = tri_indices.size() / 3;
+    for (i = 0; i < num_points; ++i)
     {
-        tmp_str = String::Printf("v %f %f %f\n", vPos[i].x, vPos[i].y, vPos[i].z);
-        fp.SerializeString(tmp_str);
+        tmp_str = String::Printf("v %f %f %f\n", tri_vertices[i].x, tri_vertices[i].y, tri_vertices[i].z);
+        file.SerializeString(tmp_str);
         //fprintf( fp, "v %f %f %f\n", vPos[i].x, vPos[i].y, vPos[i].z );
     }
     
-    for (i = 0; i < nTri; ++i)
+    for (i = 0; i < num_tri; ++i)
     {
-        tmp_str = String::Printf("#\n# %s\n#\n\n", filename);
-        fp.SerializeString(tmp_str);
+        tmp_str = String::Printf("f %d %d %d\n", 1 + tri_indices[3*i], 1 + tri_indices[3*i+1], 1 + tri_indices[3*i+2] );
+        file.SerializeString(tmp_str);
         //fprintf( fp, "f %d %d %d\n", 1 + tri_indices[3*i], 1 + tri_indices[3*i+1], 1 + tri_indices[3*i+2] );
     }
     
     //fclose( fp );
 }
 
+#if 0
 void SAUtils::WriteObjFile(const char* filename, const Array<AttractorShape>& vAllShapes)
 {
     File fp;
@@ -1718,6 +1817,7 @@ void SAUtils::WriteObjFile(const char* filename, const Array<AttractorShape>& vA
     
     //fclose( fp );
 }
+#endif // 0
 
 void SAUtils::GenerateLocalShape(Array<vec3>& local_shapes, const AttractorShapeParams& params)
 {
@@ -2095,6 +2195,59 @@ SABaryResult SAGrid::FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, floa
     return found_bary;
 }
 
+SASegResult SAGrid::FindNearestSeg(int p_idx, const Array<vec3>& line_points, float max_dist, int exclude_range)
+{
+    vec3 p_0 = line_points[p_idx];
+    int i = (int)((p_0.x - grid_bound.min.x) / cell_unit);
+    int j = (int)((p_0.y - grid_bound.min.y) / cell_unit);
+    int k = (int)((p_0.z - grid_bound.min.z) / cell_unit);
+    int i0 = max(0, i - 1); int i1 = min(grid_dim.x - 1, i + 1);
+    int j0 = max(0, j - 1); int j1 = min(grid_dim.y - 1, j + 1);
+    int k0 = max(0, k - 1); int k1 = min(grid_dim.z - 1, k + 1);
+    const float sq_max_dist = max_dist * max_dist;
+    
+    // search 3x3x3 cells in neighborhood
+    SASegResult found_seg = { INDEX_NONE, INDEX_NONE, 0.f, 0.f };
+    float sq_min_dist = sq_max_dist;
+    
+    for (int z = k0; z <= k1; z++)
+    {
+        for (int y = j0; y <= j1; y++)
+        {
+            for (int x = i0; x <= i1; x++)
+            {
+                int cell_id = x + grid_dim.x * y + grid_dim.x * grid_dim.y * z;
+                SACell const& cell = cells[cell_id];
+                for (int seg_it = 0; seg_it < cell.segs.size(); seg_it++)
+                {
+                    int seg_idx = cell.segs[seg_it];
+                    if(seg_idx > p_idx - exclude_range && seg_idx < p_idx + exclude_range)
+                        continue;
+                    
+                    vec3 s_0 = line_points[seg_idx];
+                    vec3 s_1 = line_points[seg_idx + 1];
+                    
+                    float t_seg;
+                    float sq_dist = intersect::SquaredDistancePointSegment(p_0, s_0, s_1, t_seg);
+                    if (sq_dist < sq_min_dist)
+                    {
+                        if (t_seg >= 0.f && t_seg < 1.f)
+                        {
+                            sq_min_dist = sq_dist;
+                            found_seg.cell_id = cell_id;
+                            found_seg.seg_in_array_idx = seg_it;
+                            found_seg.t_seg = t_seg;
+                            found_seg.sq_dist = sq_dist;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return found_seg;
+}
+
 int32 SAGrid::FindSegInRange(int32 bary_idx, int32 seg_idx, int32 range)
 {
     SABarycenterRef const& bary = bary_points[bary_idx];
@@ -2129,6 +2282,17 @@ void SAGrid::MoveBary(vec3 old_bary_pos, vec3 bary_pos, int bary_idx)
     {
         cells[old_bary_cell_id].barys.remove(bary_idx);
         cells[new_bary_cell_id].barys.push_back(bary_idx);
+    }
+}
+
+void SAGrid::MovePoint(vec3 old_pos, vec3 new_pos, int pt_idx)
+{
+    int old_cell_id = GetCellIdx(old_pos);
+    int new_cell_id = GetCellIdx(new_pos);
+    if (new_cell_id != old_cell_id)
+    {
+        cells[old_cell_id].segs.remove(pt_idx);
+        cells[new_cell_id].segs.push_back(pt_idx);
     }
 }
 

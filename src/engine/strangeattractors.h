@@ -392,16 +392,16 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-class AttractorShape
-{
-public:
-	StrangeAttractor*	attractor;
-	Array<vec3>			line_points;
-	Array<vec3>			tri_vertices;
-	Array<int32>		tri_indices;
-
-	AttractorShape() : attractor(nullptr) { }
-};
+//class AttractorShape
+//{
+//public:
+//	StrangeAttractor*	attractor;
+//	Array<vec3>			line_points;
+//	Array<vec3>			tri_vertices;
+//	Array<int32>		tri_indices;
+//
+//	AttractorShape() : attractor(nullptr) { }
+//};
 
 struct AttractorLineParams
 {
@@ -454,6 +454,7 @@ struct AttractorShapeParams
 	float merge_dist;
     float max_drift;
     int32 target_bary_offset;
+    int32 max_iter_count;
 
 	AttractorShapeParams() :
 		fatness_scale(1.0f),
@@ -471,14 +472,15 @@ struct AttractorShapeParams
 		crease_bevel(0.0f),
 		merge_dist(0.f),
         max_drift(0.02f),
-        target_bary_offset(10)
+        target_bary_offset(10),
+        max_iter_count(5)
 	{}
 
 	bool operator == (AttractorShapeParams& oth)
 	{
 		return fatness_scale == oth.fatness_scale && weld_vertex == oth.weld_vertex && snap_interp == oth.snap_interp && remove_line_ends == oth.remove_line_ends && /*freeze_bbox == oth.freeze_bbox &&*/ show_bary == oth.show_bary && simplify_level == oth.simplify_level && local_edge_count == oth.local_edge_count
 			&& crease_depth == oth.crease_depth && crease_width == oth.crease_width && crease_bevel == oth.crease_bevel && merge_dist == oth.merge_dist
-            && max_drift == oth.max_drift && target_bary_offset == oth.target_bary_offset;
+            && max_drift == oth.max_drift && target_bary_offset == oth.target_bary_offset && max_iter_count == oth.max_iter_count;
 	}
     
     void Serialize(class Archive& file);
@@ -619,6 +621,15 @@ struct SABaryResult
     int bary_in_array_idx;
 };
 
+struct SASegResult
+{
+    int cell_id;
+    int seg_in_array_idx;
+    float t_seg;
+    float sq_dist;
+    
+};
+
 struct SAGrid
 {
     Array<SACell> cells;
@@ -634,9 +645,11 @@ struct SAGrid
     void InitGrid(const Array<vec3>& line_points, int max_cell);
     int GetCellIdx(vec3 p) const;
     SABaryResult FindBaryCenterSeg(int seg_idx, vec3 p_0/*, vec3 p_1*/, float max_dist);
+    SASegResult FindNearestSeg(int p_idx, const Array<vec3>& line_points, float max_dist, int exclude_range);
     int FindSegInRange(int bary_idx, int seg_idx, int range);
     void MoveBary(SABaryResult const& bary_ref, vec3 bary_pos, int bary_idx);
     void MoveBary(vec3 old_bary_pos, vec3 bary_pos, int bary_idx);
+    void MovePoint(vec3 old_pos, vec3 new_pos, int pt_idx);
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -657,12 +670,12 @@ namespace SAUtils
     void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
     void		MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
-	void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
+	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
 	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, /*const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles,*/ const AttractorShapeParams& params);
 
-	void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
-	void		WriteObjFile( const char* FileName, Array<vec3>& vPos, Array<int32>& vTriIdx );
+	//void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
+	void		WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices );
 
 	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );

@@ -142,7 +142,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
         m_shape_params.weld_vertex = false;
 
 		if (m_shape_params.merge_dist > 0.f)
-			SAUtils::MergeLinePoints3(m_line_framed, cohandle->m_handles, m_shape_params, m_snapped_lines);
+			SAUtils::MergeLinePoints4(m_line_framed, cohandle->m_handles, m_shape_params, m_snapped_lines);
 		else
 			m_snapped_lines.push_back( m_line_framed );
 
@@ -310,4 +310,18 @@ void CoAttractor::PostLoad()
     m_shape_params = m_cached_shape_params;
     
 	RebuildAttractorMesh(true, true);
+}
+
+void CoAttractor::ExportAsObj(Archive& file)
+{
+    // can't use attractor buffers, as obj vertices need to be welded...
+    Array<vec3> tri_vertices_export;
+    Array<int32> tri_indices_export;
+    
+    AttractorShapeParams shape_params_export = m_shape_params;
+    shape_params_export.weld_vertex = true;
+    
+    SAUtils::GenerateSolidMesh(m_snapped_lines, shape_params_export, tri_vertices_export, nullptr, nullptr, tri_indices_export);
+    
+    SAUtils::WriteObjFile(file, m_tri_vertices, m_tri_indices);
 }

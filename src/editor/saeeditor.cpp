@@ -126,11 +126,23 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 					}
 					break;
 				}
+                case eMenuCommandType::ExportObj:
+                {
+                    String filename = m_current_file_path + m_current_file_name;
+                    File file;
+                    if (file.Open(filename.c_str(), true))
+                    {
+                        AttractorManager::GetStaticInstance()->ExportAttractorAsObj(file);
+                    }
+                    break;
+                }
                 default: break;
 			}
 
 			m_current_menu_cmd_type = eMenuCommandType::None;
 			ImGui::CloseCurrentPopup();
+            
+            RefreshListFiles();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel"))
@@ -302,6 +314,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
 		//ImGui::Checkbox("Freeze bbox", &attractor->m_shape_params.freeze_bbox);
         ImGui::Checkbox("Show bary", &attractor->m_shape_params.show_bary);
+        ImGui::InputInt("Max iteration count", &attractor->m_shape_params.max_iter_count, 1, 10);
         ImGui::InputFloat("Target dimension", &attractor->m_line_params.target_dim);
 		ImGui::SliderAngle("Shearing angle", &attractor->m_line_params.shearing_angle, -90.f, 90.f);
 		ImGui::InputFloat("Shearing scale x", &attractor->m_line_params.shearing_scale_x, 0.01f, 0.05f, 3);

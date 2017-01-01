@@ -328,3 +328,12 @@ void AttractorManager::SerializeAttractor(Archive& file)
 		attractor->PostLoad();
 	}
 }
+
+void AttractorManager::ExportAttractorAsObj(Archive& file)
+{
+    if (!m_attractors.size())
+        return;
+    
+    CoAttractor* attractor = m_attractors[0];
+    attractor->ExportAsObj(file);
+}

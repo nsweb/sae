@@ -56,6 +56,7 @@ public:
     AttractorSelection& GetEditorSelected()         { return m_editor_selected;    }
     
     void                SerializeAttractor(Archive& file);
+    void                ExportAttractorAsObj(Archive& file);
 
 public:
 
