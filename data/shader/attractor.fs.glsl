@@ -11,8 +11,11 @@ layout (location = 0) out vec4 frag_color;
 
 void main(void)
 {
-	float dotNL = max( 0., dot( normalize(vs_fs_normal), normalize(vec3(0.5,0.7,1.0)) ) );
-	frag_color.rgb = vec3(0.8,0.8,0.8) * dotNL;
+    vec3 light_dir = normalize(vec3(0.5,0.7,1.0));
+    vec3 normal = normalize(vs_fs_normal);
+	float dotNL = max( 0., 0.1 + dot( normal, light_dir ) );
+    float dotNL_back = max( 0., dot( normal, vec3(0.0, 0.0, -1.0) ) );
+	frag_color.rgb = vec3(0.8,0.8,0.8) * dotNL + vec3(0.01,0.01,0.1) * dotNL_back;
 	frag_color.rgb *= vs_fs_color.rgb;
 	frag_color.a = vs_fs_color.a;
     
