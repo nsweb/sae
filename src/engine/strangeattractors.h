@@ -664,11 +664,14 @@ namespace SAUtils
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
+	void		GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const int32 interp_spacing, const bool blend_positions);
     void        GenerateColors(AttractorLineFramed& line_framed, float color);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
     void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
     void		MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+    void		MergeLinePoints5(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+    
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);

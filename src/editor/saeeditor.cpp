@@ -58,11 +58,6 @@ bool SAEEditor::GetItemStringArray( void* data, int idx, const char** out_text )
 
 void SAEEditor::UIDrawEditor( bool* bshow_editor, RenderContext& render_ctxt )
 {
-    /*CameraCtrl_Base* cam_ctrl = Controller::GetStaticInstance()->GetActiveCameraCtrl();
-    SAECameraCtrl_Editor* cam_edit = nullptr;
-    if( cam_ctrl && cam_ctrl->IsA( SAECameraCtrl_Editor::StaticClass() ) )
-        cam_edit = static_cast<SAECameraCtrl_Editor*>( cam_ctrl );
-    */
     ImGui::Begin("Editor", bshow_editor, ImVec2(200,400), -1.f, 0/*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar*/ );
 
 	ImGui::ShowTestWindow();
