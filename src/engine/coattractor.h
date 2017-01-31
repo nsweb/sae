@@ -61,6 +61,7 @@ public:
     Array<int32>            m_tri_indices;
     vec3                    m_min_box;
     vec3                    m_max_box;
+    float                   m_rescale_factor;
 
 	// Attractor params
 	AttractorLineParams		m_line_params;

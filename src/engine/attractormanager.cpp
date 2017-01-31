@@ -18,11 +18,13 @@
 STATIC_MANAGER_CPP(AttractorManager);
 
 AttractorManager::AttractorManager() :
+    m_attractor_seed_range(1.f),
 	m_bg_shader(nullptr),
 	m_line_shader(nullptr),
 	m_mesh_shader(nullptr),
 	m_show_handles(false),
     m_show_lines(true),
+    m_show_seeds(false),
     m_prev_mouse_left_down(false)
 {
 	m_pStaticInstance = this;
@@ -75,6 +77,9 @@ void AttractorManager::_Render( RenderContext& render_ctxt )
 
 	if (m_show_handles)
 		DrawHandles(render_ctxt);
+    
+    if (m_show_seeds)
+        DrawAttractorSeeds(render_ctxt);
 }
 
 void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
@@ -189,6 +194,21 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			}
 		}
 	}
+}
+
+void AttractorManager::DrawAttractorSeeds(struct RenderContext& render_ctxt)
+{
+    for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+    {
+        CoAttractor* attractor = m_attractors[att_idx];
+        CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+        
+        u8vec4 seed_col = u8vec4(255, 250, 130, 255);
+        const float cube_size = 1.f * copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+        vec3 world_seed_pos = copos->GetTransform().TransformPosition(attractor->m_line_params.seed * attractor->m_rescale_factor);
+        
+        DrawUtils::GetStaticInstance()->PushAABB(world_seed_pos, cube_size, seed_col);
+    }
 }
 
 void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)

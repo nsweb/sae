@@ -21,6 +21,7 @@ CoAttractor::CoAttractor() :
 	m_attractor(nullptr),
     m_min_box(0.f, 0.f, 0.f),
     m_max_box(0.f, 0.f, 0.f),
+    m_rescale_factor(1.f),
 	m_view_handle_range(2000)
 {
 	Memory::MemZero(m_varrays);
@@ -103,7 +104,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
 	{
 		m_line_framed.Clear();
 
-		SAUtils::ComputeStrangeAttractorPoints(m_attractor, m_line_params, m_line_framed.points);
+		SAUtils::ComputeStrangeAttractorPoints(*m_attractor, m_line_params, m_line_framed.points, m_rescale_factor);
 		SAUtils::GenerateFrames(m_line_framed);
         SAUtils::GenerateColors(m_line_framed, 0.f);
 		m_line_framed.SetDefaultRanges();

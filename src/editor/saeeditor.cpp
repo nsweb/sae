@@ -277,11 +277,16 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     if( ImGui::CollapsingHeader("Params") )
     {
 		ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_line_params.seed);
+        ImGui::Checkbox("Show seed", &AttractorManager::GetStaticInstance()->m_show_seeds);
+        ImGui::SameLine();
+        ImGui::PushItemWidth(125);
+        ImGui::InputFloat("Range", &AttractorManager::GetStaticInstance()->m_attractor_seed_range);
         if (ImGui::Button("Random seed"))
         {
-            attractor->m_line_params.seed.x = bigball::randfloat() * 2.f - 1.f;
-            attractor->m_line_params.seed.y = bigball::randfloat() * 2.f - 1.f;
-            attractor->m_line_params.seed.z = bigball::randfloat() * 2.f - 1.f;
+            const float seed_range = AttractorManager::GetStaticInstance()->m_attractor_seed_range;
+            attractor->m_line_params.seed.x = seed_range * (bigball::randfloat() * 2.f - 1.f);
+            attractor->m_line_params.seed.y = seed_range * (bigball::randfloat() * 2.f - 1.f);
+            attractor->m_line_params.seed.z = seed_range * (bigball::randfloat() * 2.f - 1.f);
             attractor->RebuildAttractorMesh();
         }
 
@@ -293,7 +298,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
 		ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
-		ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
+		//ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 
 		ImGui::Separator();
         

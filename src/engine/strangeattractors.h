@@ -29,7 +29,7 @@ public:
 	eAttractorType	m_type;
 	vec3			m_init_point;
 	//int32			m_max_iter;
-	float			m_fatness_scale;
+	//float			m_fatness_scale;
 	float			m_dt;
 	float			m_adaptative_dist;
 
@@ -130,7 +130,7 @@ public:
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
-		m_fatness_scale = 0.25f;
+		//m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -164,7 +164,7 @@ public:
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
-		m_fatness_scale = 0.25f;
+		//m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -197,7 +197,7 @@ public:
 		// curl :
 		//m_init_point = vec3( 0.1f, -0.1f, 0.001f );
 		//m_max_iter = 500;
-		m_fatness_scale = 0.25f;
+		//m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -232,7 +232,7 @@ public:
 		//m_max_iter = 10000;
 		// curl :
 		//m_max_iter = 451;
-		m_fatness_scale = 0.05f;
+		//m_fatness_scale = 0.05f;
 		m_dt = 0.01f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -265,7 +265,7 @@ public:
 
 		m_init_point = vec3( 0.1f, 0.0f, 0.0f );
 		//m_max_iter = 1000;
-		m_fatness_scale = 0.01f;
+		//m_fatness_scale = 0.01f;
 		m_dt = 0.001f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -298,7 +298,7 @@ public:
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
 		//m_max_iter = 2000;
 
-		m_fatness_scale = 0.25f;
+		//m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -330,7 +330,7 @@ public:
 		m_init_point = vec3( 5.0f, 5.0f, 5.0f );
 		//m_max_iter = 2000;
 
-		m_fatness_scale = 0.25f;
+		//m_fatness_scale = 0.25f;
 		m_dt = 0.0025f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -658,7 +658,7 @@ struct SAGrid
 namespace SAUtils
 {
 
-	void		ComputeStrangeAttractorPoints(StrangeAttractor* attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
+	void		ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/, float& rescale_factor/*out*/);
 	//void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
 	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/);
 
@@ -680,7 +680,7 @@ namespace SAUtils
 	//void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices );
 
-	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
+	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, quat const& dst_cmp_frame, float dst_cmp_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );
 #if 0
 	void		MergeLinePointsOld( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );
