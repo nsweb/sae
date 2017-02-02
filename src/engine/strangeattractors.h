@@ -23,6 +23,11 @@ enum eAttractorType
 	eAttractor_MAX
 };
 
+enum eSaeArchiveVersion : uint32
+{
+    eSaeVersion_WithMergeSpan = 1,
+};
+
 class StrangeAttractor
 {
 public:
@@ -392,16 +397,7 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-//class AttractorShape
-//{
-//public:
-//	StrangeAttractor*	attractor;
-//	Array<vec3>			line_points;
-//	Array<vec3>			tri_vertices;
-//	Array<int32>		tri_indices;
-//
-//	AttractorShape() : attractor(nullptr) { }
-//};
+
 
 struct AttractorLineParams
 {
@@ -453,6 +449,7 @@ struct AttractorShapeParams
 	float crease_bevel;
 	float merge_dist;
     float max_drift;
+    int32 merge_span;
     int32 target_bary_offset;
     int32 max_iter_count;
 
@@ -472,6 +469,7 @@ struct AttractorShapeParams
 		crease_bevel(0.0f),
 		merge_dist(0.f),
         max_drift(0.02f),
+        merge_span(100),
         target_bary_offset(10),
         max_iter_count(5)
 	{}
@@ -664,7 +662,7 @@ namespace SAUtils
 
 	void        GenerateFrames(AttractorLineFramed& line_framed);
     void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
-	void		GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const int32 interp_spacing, const bool blend_positions);
+	void		GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const bool blend_positions);
     void        GenerateColors(AttractorLineFramed& line_framed, float color);
 	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
 	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);

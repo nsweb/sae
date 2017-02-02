@@ -108,7 +108,7 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 	{
 		DrawFileDialog(m_current_menu_cmd_type);
 
-		const char* button_labels[(int)eMenuCommandType::Count] = { "", "Save attractor (.sae)", "Load attractor (.sae)", "Export obj" };
+		const char* button_labels[(int)eMenuCommandType::Count] = { "", "Save attractor (.sae)", "Load attractor (.sae)", "Load attractor (.sae)", "Export obj" };
 		if (ImGui::Button(button_labels[(int)m_current_menu_cmd_type]))
 		{
 			// Execute command here
@@ -303,6 +303,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
+        ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
 		ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
 		//ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 

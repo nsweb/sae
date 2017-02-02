@@ -115,7 +115,7 @@ void SAUtils::MergeLinePoints5(AttractorLineFramed const& line_framed, const Arr
     BB_LOG(SAUtils, Log, "MergeLinePoints5\n");
     
     Array<AttractorSnapRange> snap_ranges;
-    const int32 interp_spacing = 100;
+    const int32 interp_spacing = shape_params.merge_span;
     const bool blend_position = true;
     const Array<vec3>& line_points = line_framed.points;
     const int32 nb_points = line_points.size();
@@ -158,7 +158,7 @@ void SAUtils::MergeLinePoints5(AttractorLineFramed const& line_framed, const Arr
         }
     }
     
-    GenerateSnappedLinesWithFrames(line_framed.points, line_framed.frames, line_framed.follow_angles, snap_ranges, shape_params, snapped_lines, interp_spacing, blend_position);
+    GenerateSnappedLinesWithFrames(line_framed.points, line_framed.frames, line_framed.follow_angles, snap_ranges, shape_params, snapped_lines, blend_position);
 }
 
 void SAUtils::MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
@@ -1039,8 +1039,10 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 //	- handles the case where multiple lines would snap on the same area / segments
 //  - suppose line_points was already modified / interpolated; not line_frames nor follow_angles
 //  - if blend_positions is true, resulting points in framed_lines will be smoothed out otherwise line_points positions will be copied as is
-void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const int32 interp_spacing, const bool blend_positions)
+void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const bool blend_positions)
 {
+    const int32 interp_spacing = shape_params.merge_span;
+    
 	// sort snap_ranges by src_points
 	Array<AttractorSnapRange> snap_ranges_sorted = snap_ranges;
 	sort(&snap_ranges_sorted[0], snap_ranges_sorted.size(),
@@ -2542,5 +2544,8 @@ void AttractorShapeParams::Serialize(Archive& file)
 {
     int32 size = (int32)((int8*)&max_drift - (int8*)this);
     file.Serialize( this, size );
+    
+    if( file.GetVersion() >= eSaeVersion_WithMergeSpan)
+        file.SerializeRaw(merge_span);
 }
 
