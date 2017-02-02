@@ -84,6 +84,10 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 			{
 				menu_cmd_type = eMenuCommandType::LoadAttractor;
 			}
+			if (ImGui::MenuItem("Load attractor (OLD)"))
+			{
+				menu_cmd_type = eMenuCommandType::LoadAttractorOld;
+			}
 			if (ImGui::MenuItem("Export Obj"))
 			{
 				menu_cmd_type = eMenuCommandType::ExportObj;
@@ -112,12 +116,14 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 			{
 				case eMenuCommandType::SaveAttractor:
 				case eMenuCommandType::LoadAttractor:
+				case eMenuCommandType::LoadAttractorOld:
 				{	
 					String filename = m_current_file_path + m_current_file_name;
 					File file;
 					if (file.Open(filename.c_str(), m_current_menu_cmd_type == eMenuCommandType::SaveAttractor ? true : false))
 					{
-						AttractorManager::GetStaticInstance()->SerializeAttractor(file);
+						bool old_format = (m_current_menu_cmd_type == eMenuCommandType::LoadAttractorOld ? true : false);
+						AttractorManager::GetStaticInstance()->SerializeAttractor(file, old_format);
 					}
 					break;
 				}

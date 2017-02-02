@@ -336,10 +336,17 @@ void AttractorManager::SetShowHandles(bool show)
 	m_show_handles = show;
 }
 
-void AttractorManager::SerializeAttractor(Archive& file)
+void AttractorManager::SerializeAttractor(Archive& file, bool old_format)
 {
     if (!m_attractors.size())
         return;
+
+	if (!old_format)
+	{
+		// manage versionning
+		uint32 file_version = 1;
+		file.SerializeVersion(file_version);
+	}
     
 	Entity* attractor = m_attractors[0]->GetEntity();
 	attractor->Serialize(file);

@@ -55,7 +55,7 @@ public:
 	bool				GetShowHandles()            { return m_show_handles; }
     AttractorSelection& GetEditorSelected()         { return m_editor_selected;    }
     
-    void                SerializeAttractor(Archive& file);
+    void                SerializeAttractor(Archive& file, bool old_format);
     void                ExportAttractorAsObj(Archive& file);
 
 public:

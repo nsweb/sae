@@ -19,6 +19,7 @@ enum class eMenuCommandType
 	NewAttractor = 0,
 	SaveAttractor,
 	LoadAttractor,
+	LoadAttractorOld,
 	ExportObj,
 	Count,
 };
