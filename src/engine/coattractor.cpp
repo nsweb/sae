@@ -1,6 +1,7 @@
 
 #include "../sae.h"
 #include "coattractor.h"
+#include "attractormanager.h"
 #include "cohandle.h"
 #include "core/json.h"
 #include "math/intersections.h"
@@ -47,7 +48,7 @@ void CoAttractor::Create( Entity* owner, class json::Object* proto )
 		{
 			String attractor_str;
 			proto->GetStringValue(param_tok, attractor_str);
-			m_attractor = SAUtils::CreateAttractorType(attractor_str);
+			m_attractor = AttractorManager::GetStaticInstance()->GetFactory()->CreateAttractorType(attractor_str);
 		}
 		if (m_attractor)
 		{
@@ -89,7 +90,7 @@ void CoAttractor::ChangeAttractorType(eAttractorType type)
     
     BB_DELETE(m_attractor);
     
-    m_attractor = SAUtils::CreateAttractorType(type);
+    m_attractor = AttractorManager::GetStaticInstance()->GetFactory()->CreateAttractorType(type);
     RebuildAttractorMesh(true);
 }
 
@@ -297,7 +298,7 @@ void CoAttractor::Serialize(Archive& file)
         file.SerializeRaw(type);
         
 		BB_DELETE(m_attractor);
-		m_attractor = SAUtils::CreateAttractorType(type);
+		m_attractor = AttractorManager::GetStaticInstance()->GetFactory()->CreateAttractorType(type);
     }
     else
     {

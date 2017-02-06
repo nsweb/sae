@@ -4,6 +4,7 @@
 #include "attractormanager.h"
 #include "coattractor.h"
 #include "cohandle.h"
+#include "strangeattractors.h"
 #include "engine/controller.h"
 #include "engine/camera.h"
 #include "engine/coposition.h"
@@ -18,6 +19,7 @@
 STATIC_MANAGER_CPP(AttractorManager);
 
 AttractorManager::AttractorManager() :
+    m_attractor_factory(nullptr),
     m_attractor_seed_range(1.f),
 	m_bg_shader(nullptr),
 	m_line_shader(nullptr),
@@ -37,6 +39,8 @@ AttractorManager::~AttractorManager()
 
 void AttractorManager::Create()
 {
+    m_attractor_factory = new AttractorFactory;
+    m_attractor_factory->Create();
 	m_bg_shader = GfxManager::GetStaticInstance()->LoadShader( "bg_editor" );
     m_line_shader = GfxManager::GetStaticInstance()->LoadShader( "attractor_line" );
 	m_mesh_shader = GfxManager::GetStaticInstance()->LoadShader("attractor");
@@ -47,6 +51,8 @@ void AttractorManager::Destroy()
 	m_bg_shader = nullptr;
     m_line_shader = nullptr;
     m_mesh_shader = nullptr;
+    m_attractor_factory->Destroy();
+    BB_DELETE(m_attractor_factory);
 }
 
 void AttractorManager::AddComponentToWorld( Component* component )

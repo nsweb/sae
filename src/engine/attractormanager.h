@@ -14,6 +14,7 @@ namespace bigball
     struct ControllerMouseState;
 };
 class CoAttractor;
+class AttractorFactory;
 
 struct AttractorSelection
 {
@@ -50,6 +51,7 @@ public:
     void				HandleScenePick(ControllerMouseState const& mouse_state);
     
     Array<CoAttractor*> const& GetAttractors()      { return m_attractors;  }
+    AttractorFactory*   GetFactory()                { return m_attractor_factory; }
 
 	void				SetShowHandles(bool show);
 	bool				GetShowHandles()            { return m_show_handles; }
@@ -60,6 +62,7 @@ public:
 
 public:
 
+    AttractorFactory*   m_attractor_factory;
     Array<CoAttractor*> m_attractors;
     AttractorSelection  m_editor_selected;
 	AttractorSelection  m_editor_hovered;

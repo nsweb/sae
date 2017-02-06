@@ -264,7 +264,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             m_current_attractor_type = attractor->GetAttractorType();
         
 		Array<String> attractor_names;
-		SAUtils::GetAttractorTypeList(attractor_names);
+        AttractorManager::GetStaticInstance()->GetFactory()->GetAttractorTypeList(attractor_names);
 
 		ImGui::PushItemWidth(120);
         ImGui::Combo("", &m_current_attractor_type, GetItemStringArray, &attractor_names, attractor_names.size());

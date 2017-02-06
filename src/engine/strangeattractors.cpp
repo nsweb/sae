@@ -2242,60 +2242,65 @@ void SAUtils::MergeLinePointsOld(const Array<vec3>& line_points, const Array<vec
 }
 #endif // 0
 
-StrangeAttractor* SAUtils::CreateAttractorType(String const& attractor_name)
+AttractorFactory::AttractorFactory() : m_all_attractors{ nullptr }
 {
-    if (attractor_name == "Lorentz")
-        return CreateAttractorType(eAttractor_Lorentz);
-    if (attractor_name == "Aizawa")
-        return CreateAttractorType(eAttractor_Aizawa);
-    if (attractor_name == "TSUCS2")
-        return CreateAttractorType(eAttractor_TSUCS2);
-    if (attractor_name == "Arnoedo")
-        return CreateAttractorType(eAttractor_Arneodo);
-    if (attractor_name == "ChenLee")
-        return CreateAttractorType(eAttractor_ChenLee);
-    if (attractor_name == "DequanLi")
-        return CreateAttractorType(eAttractor_DequanLi);
-    if (attractor_name == "LorentzMod2")
-        return CreateAttractorType(eAttractor_LorentzMod2);
-    if (attractor_name == "SpiralTest")
-        return CreateAttractorType(eAttractor_SpiralTest);
+    
+}
+AttractorFactory::~AttractorFactory()
+{
+    Destroy();
+}
+
+void AttractorFactory::Create()
+{
+    m_all_attractors[eAttractor_Lorentz] = new LorenzAttractor;
+    m_all_attractors[eAttractor_Aizawa] = new AizawaAttractor;
+    m_all_attractors[eAttractor_TSUCS2] = new TSUCS2Attractor;
+    m_all_attractors[eAttractor_Arneodo] = new ArneodoAttractor;
+    m_all_attractors[eAttractor_ChenLee] = new ChenLeeAttractor;
+    m_all_attractors[eAttractor_DequanLi] = new DequanLiAttractor;
+    m_all_attractors[eAttractor_LorentzMod2] = new LorentzMod2Attractor;
+    m_all_attractors[eAttractor_Hadley] = new HadleyAttractor;
+    m_all_attractors[eAttractor_LorentzMod1] = new LorentzMod1Attractor;
+    m_all_attractors[eAttractor_SpiralTest] = new SpiralTestAttractor;
+}
+
+void AttractorFactory::Destroy()
+{
+    for( StrangeAttractor*& attractor : m_all_attractors )
+    {
+        if( attractor )
+            delete attractor;
+        attractor = nullptr;
+    }
+}
+
+StrangeAttractor* AttractorFactory::CreateAttractorType(String const& attractor_name)
+{
+    for( StrangeAttractor* attractor : m_all_attractors )
+    {
+        if( attractor && (attractor_name == attractor->GetClassName()) )
+            return attractor->NewClassObject();
+    }
+
+    return nullptr;
+}
+
+StrangeAttractor* AttractorFactory::CreateAttractorType(eAttractorType attractor_type)
+{
+    if( m_all_attractors[attractor_type] )
+        return m_all_attractors[attractor_type]->NewClassObject();
     
     return nullptr;
 }
 
-StrangeAttractor* SAUtils::CreateAttractorType(eAttractorType attractor_type)
+void AttractorFactory::GetAttractorTypeList(Array<String>& attractor_names)
 {
-    if (attractor_type == eAttractor_Lorentz)
-        return new LorenzAttractor;
-    if (attractor_type == eAttractor_Aizawa)
-        return new AizawaAttractor;
-    if (attractor_type == eAttractor_TSUCS2)
-        return new TSUCS2Attractor;
-    if (attractor_type == eAttractor_Arneodo)
-        return new ArneodoAttractor;
-    if (attractor_type == eAttractor_ChenLee)
-        return new ChenLeeAttractor;
-    if (attractor_type == eAttractor_DequanLi)
-        return new DequanLiAttractor;
-    if (attractor_type == eAttractor_LorentzMod2)
-        return new LorentzMod2Attractor;
-    if (attractor_type == eAttractor_SpiralTest)
-        return new SpiralTestAttractor;
-    
-    return nullptr;
-}
-
-void SAUtils::GetAttractorTypeList(Array<String>& attractor_names)
-{
-    attractor_names.push_back("Lorentz");
-    attractor_names.push_back("Aizawa");
-    attractor_names.push_back("TSUCS2");
-    attractor_names.push_back("Arnoedo");
-    attractor_names.push_back("ChenLee");
-    attractor_names.push_back("DequanLi");
-    attractor_names.push_back("LorentzMod2");
-    attractor_names.push_back("SpiralTest");
+    for( StrangeAttractor* attractor : m_all_attractors )
+    {
+        if( attractor )
+            attractor_names.push_back(attractor->GetClassName());
+    }
 }
 
 void SAUtils::ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds)

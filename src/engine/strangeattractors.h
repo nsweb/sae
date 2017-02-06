@@ -19,6 +19,8 @@ enum eAttractorType
 	eAttractor_ChenLee,
 	eAttractor_DequanLi,
 	eAttractor_LorentzMod2,
+    eAttractor_Hadley,
+    eAttractor_LorentzMod1,
     eAttractor_SpiralTest,
 	eAttractor_MAX
 };
@@ -115,6 +117,7 @@ public:
 
 	virtual void GetDerivatives(const vec3& P, vec3& DP) const = 0;
 	virtual const char* GetClassName() const = 0;
+    virtual StrangeAttractor* NewClassObject() const = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -148,6 +151,7 @@ public:
 	}
 
 	virtual const char* GetClassName() const override  { return "Lorenz"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new LorenzAttractor; }
 };
 
 
@@ -182,6 +186,7 @@ public:
 	}
 
 	virtual const char* GetClassName() const override  { return "Arneodo"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new ArneodoAttractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -215,6 +220,7 @@ public:
 	}
 
 	virtual const char* GetClassName() const override { return "ChenLee"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new ChenLeeAttractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -234,10 +240,6 @@ public:
 		m_f = 0.1f;
 
 		m_init_point = vec3( 0.1f, 0.0f, 0.0f );
-		//m_max_iter = 10000;
-		// curl :
-		//m_max_iter = 451;
-		//m_fatness_scale = 0.05f;
 		m_dt = 0.01f;
 		m_adaptative_dist = 0.24f;
 	}
@@ -250,6 +252,7 @@ public:
 	}
 
 	virtual const char* GetClassName() const override  { return "Aizawa"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new AizawaAttractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -279,9 +282,10 @@ public:
 	{
 		DP.x = m_alpha * (P.y - P.x) + m_delta * P.x * P.z;
 		DP.y = m_c * P.x - P.x * P.z + m_g * P.y;
-		DP.z = m_beta * P.z + P.x * P.y + m_epsilon * P.x * P.x * P.x;
+		DP.z = m_beta * P.z + P.x * P.y - m_epsilon * P.x * P.x;
 	}
 	virtual const char* GetClassName() const override  { return "TSUCS2"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new TSUCS2Attractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -316,6 +320,7 @@ public:
 	}
 
 	virtual const char* GetClassName() const override  { return "DequanLi"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new DequanLiAttractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -348,6 +353,71 @@ public:
 	}
 
 	virtual const char* GetClassName() const override  { return "LorentzMod2"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new LorentzMod2Attractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class HadleyAttractor : public StrangeAttractor
+{
+public:
+    float m_alpha, m_beta, m_delta, m_gamma;
+    
+    HadleyAttractor()
+    {
+        m_type = eAttractor_Hadley;
+        m_alpha = 0.2f;
+        m_beta = 4.0f;
+        m_delta = 1.0f;
+        m_gamma = 8.0f;
+        
+        m_init_point = vec3( 5.0f, 5.0f, 5.0f );
+
+        m_dt = 0.0025f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    {
+        DP.x = -P.y * P.y - P.z * P.z + m_alpha * (-P.x + m_gamma);
+        DP.y = P.x*(P.y - m_beta*P.z) - P.y + m_delta;
+        DP.z = -P.z + P.x*(m_beta*P.y + P.z);
+    }
+    
+    virtual const char* GetClassName() const override  { return "Hadley"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new HadleyAttractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class LorentzMod1Attractor : public StrangeAttractor
+{
+public:
+    float m_alpha, m_beta, m_delta, m_gamma;
+    
+    LorentzMod1Attractor()
+    {
+        m_type = eAttractor_LorentzMod1;
+        m_alpha = 0.1f;
+        m_beta = 4.0f;
+        m_delta = 0.08f;
+        m_gamma = 14.0f;
+        
+        m_init_point = vec3( 5.0f, 5.0f, 5.0f );
+        //m_max_iter = 2000;
+        
+        //m_fatness_scale = 0.25f;
+        m_dt = 0.0025f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    {
+        DP.x = -m_alpha*P.x + P.y*P.y - P.z*P.z + m_alpha*m_gamma;
+        DP.y = P.x*(P.y - m_beta*P.z) + m_delta;
+        DP.z = -P.z + P.x*(m_beta*P.y + P.z);
+    }
+    
+    virtual const char* GetClassName() const override  { return "LorentzMod1"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new LorentzMod1Attractor; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -394,6 +464,22 @@ public:
     }
     
     virtual const char* GetClassName() const override  { return "SpiralTest"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new SpiralTestAttractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class AttractorFactory
+{
+public:
+    AttractorFactory();
+    ~AttractorFactory();
+    void Create();
+    void Destroy();
+    StrangeAttractor*	CreateAttractorType(String const& attractor_name);
+    StrangeAttractor*	CreateAttractorType(eAttractorType attractor_type);
+    void				GetAttractorTypeList(Array<String>& attractor_names);
+    
+    StrangeAttractor* m_all_attractors[eAttractor_MAX];
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -683,10 +769,6 @@ namespace SAUtils
 #if 0
 	void		MergeLinePointsOld( const Array<vec3>& line_points, const Array<vec3>& vVXFollow, const Array<vec3>& vVX, const Array<vec3>& vVZ, Array<vec3>& vMergePoints, Array<vec3>& vMergeFollow, const AttractorShapeParams& params );
 #endif
-
-	StrangeAttractor*	CreateAttractorType(String const& attractor_name);
-    StrangeAttractor*	CreateAttractorType(eAttractorType attractor_type);
-	void				GetAttractorTypeList(Array<String>& attractor_names);
     
     const int points_in_bound = 20;
     void ComputeBounds(const Array<vec3>& line_points, float margin, Array<AABB>& bounds);
