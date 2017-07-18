@@ -38,60 +38,80 @@ public:
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
     
     void                ChangeAttractorType(eAttractorType type);
-	void				RebuildAttractorMesh(bool force_rebuild = false, bool keep_handle = false);
+	void				RebuildAttractorMesh(bool force_rebuild = false/*, bool keep_handle = false*/);
     eAttractorType      GetAttractorType()   { return m_attractor ? m_attractor->m_type : eAttractor_None; }
+    
+    void                InsertCurve(int32 at_idx);
+    void                DeleteCurve(int32 at_idx);
 
 	struct PickResult
 	{
 		vec3	m_hit_pos;
-		int32	m_line_idx;
+		int32	m_curve_idx;
+        int32   m_line_idx;
 	};
 
 	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, const float ray_width, PickResult& pick_result);
+    const AttractorOrientedCurve* GetCurvePreview() const;
+    void                GetMeshRenderOffsetsWithoutPreview(ivec2& start_range, ivec2& end_range) const;
 
 public:
 	StrangeAttractor*       m_attractor;
     
-	AttractorLineFramed		m_line_framed;
-
-	Array<AttractorLineFramed>	m_snapped_lines;
+	Array<AttractorOrientedCurve>	m_curves;
+    
     Array<vec3>             m_tri_vertices;
 	Array<vec3>             m_tri_normals;
-	Array<float>            m_tri_colors;
     Array<int32>            m_tri_indices;
+    
+    Array<vec3>             m_tri_vertices_preview;
+    Array<vec3>             m_tri_normals_preview;
+    Array<int32>            m_tri_indices_preview;
+    
+    Array<int32>            m_indice_offsets;
+    // dimensions of the attractor
     vec3                    m_min_box;
     vec3                    m_max_box;
     float                   m_rescale_factor;
 
 	// Attractor params
 	AttractorLineParams		m_line_params;
-	AttractorLineParams		m_cached_line_params;
     AttractorShapeParams    m_shape_params;
-	AttractorShapeParams    m_cached_shape_params;
-
-	int32					m_view_handle_range;
+    int32                   m_preview_idx;
+	
+    // Cached parameters
+	AttractorLineParams		m_cached_line_params;
+    AttractorShapeParams    m_cached_shape_params;
+    //Array<AttractorSeedParams>  m_cached_seed_params;
+    int32                   m_cached_preview_idx;
 
 	enum eVAType
 	{
-		eVALinePoints = 0,
-		eVAMesh,
+		//eVALinePoints = 0,
+		eVAMesh = 0,
+        eVAMeshPreview,
 		eVACount
 	};
 	enum eVBType
 	{
-		eVBLinePoints = 0,   
-		eVBMesh,
+		//eVBLinePoints = 0,
+		eVBMesh = 0,
 		eVBMeshNormals,
-		eVBMeshColors,
+		//eVBMeshColors,
 		eVBMeshElt,
-		eVBCount
+        eVBMeshPreview,
+        eVBMeshNormalsPreview,
+        eVBMeshEltPreview,
+        eVBCount
 	};
 
 	GLuint			m_varrays[eVACount];
 	GLuint			m_vbuffers[eVBCount];
+    int32           m_vb_preview_size;
+    int32           m_vb_mesh_size;
 
 private:
-	void				UpdateVertexBuffers();
+	void				UpdateVertexBuffers(bool update_preview, bool update_mesh);
 
 };
 

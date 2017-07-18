@@ -24,12 +24,19 @@ void CoHandle::Create(Entity* owner, class json::Object* proto)
 {
 	Super::Create( owner, proto );
 
-
+    // Create a default handle
+    if (m_handles.size() == 0)
+    {
+        m_handles.push_back(AttractorHandle());
+    }
 }
 
 void CoHandle::Destroy()
 {
 	Super::Destroy();
+    
+    m_handles.clear();
+    m_cached_handles.clear();
 }
 
 void CoHandle::AddToWorld()
@@ -60,7 +67,7 @@ void CoHandle::_Render(RenderContext& render_ctxt)
 	
 }
 
-bool CoHandle::HasHandleArrayChanged()
+bool CoHandle::HasAnyHandleChanged()
 {
 	if (m_handles.size() != m_cached_handles.size())
 		return true;
@@ -73,6 +80,16 @@ bool CoHandle::HasHandleArrayChanged()
 	}
 
 	return false;
+}
+
+bool CoHandle::HasHandleChanged(int32 h_idx)
+{
+    int32 num_handle = m_handles.size();
+    int32 num_cached_handle = m_cached_handles.size();
+    if (h_idx < 0 || h_idx > num_handle - 1 || h_idx > num_cached_handle - 1 )
+        return true;
+    
+    return !(m_handles[h_idx] == m_cached_handles[h_idx]);
 }
 
 void CoHandle::SaveHandleArray()
@@ -89,14 +106,14 @@ void CoHandle::InsertHandle(int32 at_idx)
 	AttractorHandle handle;
     if (at_idx < num_handle)
     {
-        handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
-        handle.m_mesh_idx = handle.m_line_idx;
+        //handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + m_handles[at_idx].m_line_idx) / 2;
+        //handle.m_mesh_idx = handle.m_line_idx;
         m_handles.insert(handle, at_idx);
     }
     else
     {
-        handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + 1);
-        handle.m_mesh_idx = handle.m_line_idx;
+        //handle.m_line_idx = (m_handles[at_idx - 1].m_line_idx + 1);
+        //handle.m_mesh_idx = handle.m_line_idx;
         m_handles.push_back(handle);
     }
 }
@@ -104,10 +121,8 @@ void CoHandle::InsertHandle(int32 at_idx)
 void CoHandle::DeleteHandle(int32 at_idx)
 {
     int32 num_handle = m_handles.size();
-    if (at_idx <= 0 || at_idx >= num_handle - 1 )
-        return;
-    
-    m_handles.erase(at_idx);
+    if ( at_idx >= 0 && at_idx < num_handle && num_handle > 1 )
+        m_handles.erase(at_idx);
 }
 
 bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& pick_result)
@@ -124,10 +139,12 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 	for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 	{
 		AttractorHandle const& handle = m_handles[h_idx];
-
+        AttractorOrientedCurve const& curve = attractor->m_curves[h_idx];
+        int curve_size = curve.frames.size();
+        if (handle.m_idx_on_curve >= 0 && handle.m_idx_on_curve < curve_size)
 		{
-			vec3 world_line_handle_pos = attr_transform.TransformPosition(attractor->m_line_framed.points[handle.m_line_idx]);
-			quat world_line_handle_quat = attr_transform.GetRotation() * attractor->m_line_framed.frames[handle.m_line_idx];
+			vec3 world_line_handle_pos = attr_transform.TransformPosition(handle.m_seed.seed * attractor->m_rescale_factor);
+            quat world_line_handle_quat = attr_transform.GetRotation() * curve.frames[handle.m_idx_on_curve];
 			transform h_line_transform(world_line_handle_quat, world_line_handle_pos, cube_size);
 			vec3 ray_start_box = h_line_transform.TransformPositionInverse(ray_start);
 			vec3 ray_end_box = h_line_transform.TransformPositionInverse(ray_end);
@@ -142,7 +159,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 			}
 		}
         
-		{
+		/*{
 			vec3 world_mesh_handle_pos = attr_transform.TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
 			transform h_mesh_transform(quat(1.f, 0.f, 0.f, 0.f), world_mesh_handle_pos, cube_size);
 			vec3 ray_start_sphere = h_mesh_transform.TransformPositionInverse(ray_start);
@@ -156,7 +173,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 				pick_result.m_handle_idx = h_idx;
 				pick_result.m_is_line_pick = false;
 			}
-		}
+		}*/
 	}
 
 	return pick_result.m_handle_idx != INDEX_NONE;

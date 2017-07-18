@@ -13,21 +13,22 @@
 #include "../engine/coattractor.h"
 #include "../engine/cohandle.h"
 #include "../engine/saecamera.h"
+#include "../engine/dfmanager.h"
 
 
-SAEEditor* SAEEditor::ms_peditor = nullptr;
+SAEEditor* SAEEditor::ms_editor = nullptr;
 
 SAEEditor::SAEEditor() :
     m_current_attractor_type(INDEX_NONE)
 {
-    ms_peditor = this;
+    ms_editor = this;
 	//m_current_file_name.resize(512);
 	//m_current_file_name = "";
 }
 
 SAEEditor::~SAEEditor()
 {
-    ms_peditor = nullptr;
+    ms_editor = nullptr;
 }
 
 static void UIOnToggleEditorCB( bool bshow_editor )
@@ -35,9 +36,9 @@ static void UIOnToggleEditorCB( bool bshow_editor )
 
 }
 
-static void UIDrawEditorCB( bool* bshow_editor, bigball::RenderContext& render_ctxt )
+static void UIDrawEditorCB( bool* show_editor, bigball::RenderContext& render_ctxt )
 {
-    SAEEditor::Get()->UIDrawEditor( bshow_editor, render_ctxt );
+    SAEEditor::Get()->UIDrawEditor( show_editor, render_ctxt );
 }
 static void UIDrawEditorMenusCB(bigball::RenderContext& render_ctxt)
 {
@@ -56,9 +57,9 @@ bool SAEEditor::GetItemStringArray( void* data, int idx, const char** out_text )
 	return false;
 }
 
-void SAEEditor::UIDrawEditor( bool* bshow_editor, RenderContext& render_ctxt )
+void SAEEditor::UIDrawEditor( bool* show_editor, RenderContext& render_ctxt )
 {
-    ImGui::Begin("Editor", bshow_editor, ImVec2(200,400), -1.f, 0/*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar*/ );
+    ImGui::Begin("Editor", show_editor, ImVec2(200,400), -1.f, 0/*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar*/ );
 
 	ImGui::ShowTestWindow();
 
@@ -282,29 +283,197 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
     if( ImGui::CollapsingHeader("Params") )
     {
-		ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_line_params.seed);
-        ImGui::Checkbox("Show seed", &AttractorManager::GetStaticInstance()->m_show_seeds);
-        ImGui::SameLine();
-        ImGui::PushItemWidth(125);
-        ImGui::InputFloat("Range", &AttractorManager::GetStaticInstance()->m_attractor_seed_range);
-        if (ImGui::Button("Random seed"))
+        if (ImGui::Button("Force rebuild"))
         {
-            const float seed_range = AttractorManager::GetStaticInstance()->m_attractor_seed_range;
-            attractor->m_line_params.seed.x = seed_range * (bigball::randfloat() * 2.f - 1.f);
-            attractor->m_line_params.seed.y = seed_range * (bigball::randfloat() * 2.f - 1.f);
-            attractor->m_line_params.seed.z = seed_range * (bigball::randfloat() * 2.f - 1.f);
-            attractor->RebuildAttractorMesh();
+            attractor->RebuildAttractorMesh( true );
         }
+        
+        AttractorSelection& current_selection = AttractorManager::GetStaticInstance()->GetEditorSelected();
+        int32 num_handles = cohandle->m_handles.size();
+        
+        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
+        {
+            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
+            ImGui::PushItemWidth(125);
+            float& seed_range = AttractorManager::GetStaticInstance()->m_attractor_seed_range;
+            ImGui::InputFloat("Range", &seed_range);
+            ImGui::PushItemWidth(250.f);
+            ImGui::InputFloat3("Seed", (float*)&handle.m_seed.seed, 6/*, ImGuiInputTextFlags_ReadOnly*/);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (ImGui::Button("Random seed"))
+            {
+                handle.m_seed.seed.x = seed_range * (bigball::randfloat() * 2.f - 1.f);
+                handle.m_seed.seed.y = seed_range * (bigball::randfloat() * 2.f - 1.f);
+                handle.m_seed.seed.z = seed_range * (bigball::randfloat() * 2.f - 1.f);
+            }
+            if( ImGui::InputInt("Iteration steps", &handle.m_seed.iter, 1, 100) )
+                handle.m_seed.iter = max( handle.m_seed.iter, 3 );
+            if( ImGui::InputInt("Reverse iter. steps", &handle.m_seed.rev_iter, 1, 100) )
+               handle.m_seed.rev_iter = max( handle.m_seed.rev_iter, 0 );
+            
+            float& seed_move = AttractorManager::GetStaticInstance()->m_attractor_seed_move_range;
+            ImGui::PushItemWidth(250.f);
+            ImGui::SliderFloat("Move", &seed_move, 0.f, 2.f, "%.5f", 2.f);
+            ImGui::PopItemWidth();
+            
+            {
+                ImGui::Text("off");
+                ImGui::SameLine();
+                bool o_0 = ImGui::Button("<");
+                ImGui::SameLine();
+                bool o_1 = ImGui::Button(">");
+                if(o_0 || o_1)
+                {
+                    Array<vec3> const& points = attractor->GetCurvePreview()->points;
+                    int32 new_idx = clamp(handle.m_idx_on_curve + (o_0 ? -1 : +1), 0, points.size()-1 );
+                    handle.m_seed.seed = points[new_idx];
+                }
+            }
+            {
+                ImGui::SameLine();
+                ImGui::Text("left");
+                ImGui::SameLine();
+                bool l_0 = ImGui::Button("l");
+                ImGui::SameLine();
+                bool l_1 = ImGui::Button("r");
+                if(l_0 || l_1)
+                {
+                    Array<quat> const& frames = attractor->GetCurvePreview()->frames;
+                    mat3 mat(frames[handle.m_idx_on_curve]);
+                    vec3 vz = mat.v2;   // RIGHT
+                    
+                    handle.m_seed.seed += vz * (l_0 ? -seed_move : seed_move);
+                }
+            }
+            {
+                ImGui::SameLine();
+                ImGui::Text("up");
+                ImGui::SameLine();
+                bool l_0 = ImGui::Button("u");
+                ImGui::SameLine();
+                bool l_1 = ImGui::Button("d");
+                if(l_0 || l_1)
+                {
+                    Array<quat> const& frames = attractor->GetCurvePreview()->frames;
+                    mat3 mat(frames[handle.m_idx_on_curve]);
+                    vec3 vy = mat.v1;   // UP
+
+                    handle.m_seed.seed += vy * (l_0 ? -seed_move : seed_move);
+                }
+            }
+            
+            {
+                bool x_0 = ImGui::Button("+x");
+                ImGui::SameLine();
+                bool x_1 = ImGui::Button("-x");
+                ImGui::SameLine();
+                bool y_0 = ImGui::Button("+y");
+                ImGui::SameLine();
+                bool y_1 = ImGui::Button("-y");
+                ImGui::SameLine();
+                bool z_0 = ImGui::Button("+z");
+                ImGui::SameLine();
+                bool z_1 = ImGui::Button("-z");
+                if( x_0 || x_1 || y_0 || y_1 || z_0 || z_1)
+                {
+                    vec3 offset(0.f);
+                    offset.x += x_0 ? seed_move : (x_1 ? -seed_move : 0.f);
+                    offset.y += y_0 ? seed_move : (y_1 ? -seed_move : 0.f);
+                    offset.z += z_0 ? seed_move : (z_1 ? -seed_move : 0.f);
+                    handle.m_seed.seed += offset;
+                }
+            }
+        }
+        
+        //ImGui::InputInt("View range", &attractor->m_view_handle_range, 1, 100000);
+        
+        ImGui::PushItemWidth(50);
+        Array<String> str_handle_array;
+        for (int32 h_idx = 0; h_idx < num_handles; h_idx++)
+        {
+            str_handle_array.push_back(String::Printf("%d", h_idx));
+        }
+        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
+        ImGui::ListBox("", &current_selection.m_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
+        ImGui::PopItemWidth();
+        
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        
+        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
+        {
+            current_selection.m_attractor = attractor;
+            
+            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
+            
+            bool insert_before = (current_selection.m_handle_idx != 0);
+            bool insert_after = true;//handle.m_line_idx < attractor->m_line_framed.points.size() - 2; // (current_selection.m_handle_idx != num_handles - 1 );
+            if ( (insert_before && ImGui::Button("Insert before", ImVec2(0,20))) ||
+                (!insert_before && ImGui::InvisibleButton("", ImVec2(1,20))))
+            {
+                cohandle->InsertHandle( current_selection.m_handle_idx );
+                attractor->InsertCurve( current_selection.m_handle_idx );
+            }
+            if ( (insert_after && ImGui::Button("Insert after", ImVec2(0,20))) ||
+                (!insert_after && ImGui::InvisibleButton("", ImVec2(1,20))))
+            {
+                cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
+                attractor->InsertCurve( current_selection.m_handle_idx + 1 );
+            }
+            if (num_handles > 1)
+                if (ImGui::Button("Delete"))
+                {
+                    cohandle->DeleteHandle( current_selection.m_handle_idx );
+                    attractor->DeleteCurve( current_selection.m_handle_idx );
+                }
+            
+            attractor->m_preview_idx = current_selection.m_handle_idx;
+        }
+        ImGui::EndGroup();
+        
+        /*if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
+        {
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::PushItemWidth(140);
+            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
+            ImGui::InputInt("line idx", &handle.m_line_idx);
+            //ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
+            
+            //handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_framed.points.size() - 2);
+            //handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_framed.points.size() - 2);
+            
+            //const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
+            //ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, AttractorHandle::eHT_Count);
+            
+            ImGui::PopItemWidth();
+            ImGui::EndGroup();
+        }*/
+        
+        //static float value = 0.5f;
+        //if (ImGui::BeginPopupContextItem("item context menu"))
+        //{
+        //	if (ImGui::Selectable("Set to zero")) value = 0.0f;
+        //	if (ImGui::Selectable("Set to PI")) value = 3.1415f;
+        //	ImGui::EndPopup();
+        //}
+        
+        ImGui::Separator();
+        
+        //ImGui::InputFloat3("Attractor seed", (float*)&attractor->m_line_params.seed);
+        //ImGui::Checkbox("Show seed", &AttractorManager::GetStaticInstance()->m_show_seeds);
+        //ImGui::SameLine();
 
 		ImGui::PushItemWidth(125);
-		ImGui::InputInt("Iteration steps", &attractor->m_line_params.iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
-		ImGui::InputInt("Reverse iter. steps", &attractor->m_line_params.rev_iter, 1, 100);
-		ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
+		//ImGui::InputInt("Iteration steps", &attractor->m_line_params.iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
+		//ImGui::InputInt("Reverse iter. steps", &attractor->m_line_params.rev_iter, 1, 100);
+		//ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
-        ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
-		ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
+        //ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
+		//ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
 		//ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 
 		ImGui::Separator();
@@ -314,14 +483,14 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Crease depth", &attractor->m_shape_params.crease_depth);
 		ImGui::InputFloat("Crease width", &attractor->m_shape_params.crease_width);
 		ImGui::InputFloat("crease bevel", &attractor->m_shape_params.crease_bevel);
-        ImGui::InputFloat("max drift", &attractor->m_shape_params.max_drift);
-        ImGui::InputInt("target bary offset", &attractor->m_shape_params.target_bary_offset, 1, 20);
+        //ImGui::InputFloat("max drift", &attractor->m_shape_params.max_drift);
+        //ImGui::InputInt("target bary offset", &attractor->m_shape_params.target_bary_offset, 1, 20);
 
 		ImGui::Separator();
 
 		//ImGui::Checkbox("Freeze bbox", &attractor->m_shape_params.freeze_bbox);
-        ImGui::Checkbox("Show bary", &attractor->m_shape_params.show_bary);
-        ImGui::InputInt("Max iteration count", &attractor->m_shape_params.max_iter_count, 1, 10);
+        //ImGui::Checkbox("Show bary", &attractor->m_shape_params.show_bary);
+        //ImGui::InputInt("Max iteration count", &attractor->m_shape_params.max_iter_count, 1, 10);
         ImGui::InputFloat("Target dimension", &attractor->m_line_params.target_dim);
 		ImGui::SliderAngle("Shearing angle", &attractor->m_line_params.shearing_angle, -90.f, 90.f);
 		ImGui::InputFloat("Shearing scale x", &attractor->m_line_params.shearing_scale_x, 0.01f, 0.05f, 3);
@@ -331,10 +500,10 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 
 		ImGui::Separator();
 		
-		if (ImGui::Button("Rebuild"))
+		/*if (ImGui::Button("Rebuild"))
 		{ 
 			attractor->RebuildAttractorMesh();
-		}
+		}*/
     }
 
 	if (ImGui::CollapsingHeader("Stats"))
@@ -345,88 +514,9 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         ImGui::InputFloat3("Dimensions", (float*)&dimensions, 2, ImGuiInputTextFlags_ReadOnly);
 	}
     
-	bool show_modifications = ImGui::CollapsingHeader("Modifications");
-	AttractorManager::GetStaticInstance()->SetShowHandles(show_modifications);
+	//bool show_modifications = ImGui::CollapsingHeader("Modifications");
+	//AttractorManager::GetStaticInstance()->SetShowHandles(show_modifications);
 
-	if (show_modifications)
-    {
-		if (ImGui::Button("Rebuild"))
-		{
-			attractor->RebuildAttractorMesh();
-		}
-		ImGui::InputInt("View range", &attractor->m_view_handle_range, 1, 100000);
-		
-		int32 num_handles = cohandle->m_handles.size();
-
-		ImGui::PushItemWidth(50);
-		Array<String> str_handle_array;
-		for (int32 h_idx = 0; h_idx < num_handles; h_idx++)
-		{
-			str_handle_array.push_back(String::Printf("%d", h_idx));
-		}
-
-        AttractorSelection& current_selection = AttractorManager::GetStaticInstance()->GetEditorSelected();
-		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
-        ImGui::ListBox("", &current_selection.m_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
-		ImGui::PopItemWidth();
-
-		ImGui::SameLine();
-		ImGui::BeginGroup();
-        
-        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
-        {
-            current_selection.m_attractor = attractor;
-            
-            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
-
-            bool insert_before = (current_selection.m_handle_idx != 0);
-			bool insert_after = handle.m_line_idx < attractor->m_line_framed.points.size() - 2; // (current_selection.m_handle_idx != num_handles - 1 );
-            if ( (insert_before && ImGui::Button("Insert before", ImVec2(0,20))) ||
-                 (!insert_before && ImGui::InvisibleButton("", ImVec2(1,20))))
-            {
-                cohandle->InsertHandle( current_selection.m_handle_idx );
-            }
-            if ( (insert_after && ImGui::Button("Insert after", ImVec2(0,20))) ||
-                 (!insert_after && ImGui::InvisibleButton("", ImVec2(1,20))))
-            {
-                cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
-            }
-            if (num_handles > 2)
-            if (ImGui::Button("Delete"))
-            {
-                cohandle->DeleteHandle( current_selection.m_handle_idx );
-            }
-        }
-		ImGui::EndGroup();
-        
-        if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
-        {
-            ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::PushItemWidth(140);
-            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
-            ImGui::InputInt("line idx", &handle.m_line_idx);
-            ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
-            
-			handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_framed.points.size() - 2);
-			handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_framed.points.size() - 2);
-            
-            const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
-            ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, AttractorHandle::eHT_Count);
-            
-            ImGui::PopItemWidth();
-            ImGui::EndGroup();
-        }
-
-		//static float value = 0.5f;
-		//if (ImGui::BeginPopupContextItem("item context menu"))
-		//{
-		//	if (ImGui::Selectable("Set to zero")) value = 0.0f;
-		//	if (ImGui::Selectable("Set to PI")) value = 3.1415f;
-		//	ImGui::EndPopup();
-		//}
-
-    }
     
     if (ImGui::CollapsingHeader("Display"))
     {
@@ -434,6 +524,19 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     }
     
     ImGui::End();
+}
+
+void SAEEditor::Tick( struct TickContext& tick_ctxt )
+{
+    vec3 scene_center(0.f, 0.f, 0.f);
+    Array<CoAttractor*> const& attractors = AttractorManager::GetStaticInstance()->GetAttractors();
+    int num_attractor = attractors.size();
+    for( int att_idx = 0; att_idx < num_attractor; att_idx++)
+    {
+        CoPosition* copos = static_cast<CoPosition*>(attractors[att_idx]->GetEntityComponent("CoPosition"));
+        scene_center.z = min( scene_center.z, attractors[att_idx]->m_min_box.z * copos->GetScale() );
+    }
+    DFManager::GetStaticInstance()->SetSceneCenter(scene_center);
 }
 
 void SAEEditor::HandleScenePick(ControllerMouseState const& mouse_state)

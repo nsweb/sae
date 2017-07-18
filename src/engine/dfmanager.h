@@ -37,6 +37,7 @@ public:
 	virtual void		Tick( struct TickContext& tick_ctxt );
 	virtual void		_Render( struct RenderContext& render_ctxt );
 	void				DrawCube();
+    void                SetSceneCenter(vec3 center)     { m_scene_center = center; }
 
 protected:
 
@@ -57,6 +58,7 @@ protected:
 	GLuint			m_varrays[eVACount];
 	GLuint			m_vbuffers[eVBCount];
     Shader*         m_bg_shader;
+    vec3            m_scene_center;
 };
 
 

@@ -21,12 +21,13 @@ STATIC_MANAGER_CPP(AttractorManager);
 AttractorManager::AttractorManager() :
     m_attractor_factory(nullptr),
     m_attractor_seed_range(1.f),
+    m_attractor_seed_move_range(1.f),
 	m_bg_shader(nullptr),
 	m_line_shader(nullptr),
 	m_mesh_shader(nullptr),
-	m_show_handles(false),
+	m_show_handles(true),
     m_show_lines(true),
-    m_show_seeds(false),
+    //m_show_seeds(false),
     m_prev_mouse_left_down(false)
 {
 	m_pStaticInstance = this;
@@ -79,13 +80,24 @@ void AttractorManager::_Render( RenderContext& render_ctxt )
 {
 	PROFILE_SCOPE( __FUNCTION__ );
 
+    UpdateAttractorMeshes();
+    
     DrawAttractors(render_ctxt);
 
 	if (m_show_handles)
 		DrawHandles(render_ctxt);
     
-    if (m_show_seeds)
-        DrawAttractorSeeds(render_ctxt);
+    //if (m_show_seeds)
+     //   DrawAttractorSeeds(render_ctxt);
+}
+
+void AttractorManager::UpdateAttractorMeshes()
+{
+    for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+    {
+        CoAttractor* attractor = m_attractors[att_idx];
+        attractor->RebuildAttractorMesh();
+    }
 }
 
 void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
@@ -94,42 +106,46 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
     mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
     mat4 view_mat = bigball::inverse(view_inv_mat);
     
-    if( m_show_lines )
-	{
-        m_line_shader->Bind();
-        
-		ShaderUniform uni_world = m_line_shader->GetUniformLocation("world_mat");
-		ShaderUniform uni_view = m_line_shader->GetUniformLocation("view_mat");
-		m_line_shader->SetUniform(uni_view, view_mat);
-		ShaderUniform uni_proj = m_line_shader->GetUniformLocation("proj_mat");
-		m_line_shader->SetUniform(uni_proj, render_ctxt.m_proj_mat);
-		ShaderUniform uni_color = m_line_shader->GetUniformLocation("color_info");
-
-		for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
-		{
-			CoAttractor* attractor = m_attractors[att_idx];
-			CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-			CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
-
-			float sel_idx = -1.f;
-			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
-			{
-				AttractorHandle const& handle = cohandle->GetHandle(m_editor_selected.m_handle_idx);
-				sel_idx = (float)handle.m_mesh_idx;
-			}
-
-			mat4 world_mat(copos->GetTransform().ToMat4());
-			m_line_shader->SetUniform(uni_world, world_mat);
-			m_line_shader->SetUniform(uni_color, vec3(sel_idx, (float)attractor->m_view_handle_range, 1.0f));
-			glBindVertexArray(attractor->m_varrays[CoAttractor::eVALinePoints]);
-			const int line_count = attractor->m_line_framed.points.size() - 1;
-			glDrawArrays(GL_LINE_STRIP, 0, line_count);
-			glBindVertexArray(0);
-
-		}
-        
-        m_line_shader->Unbind();
-	}
+    //if( m_show_lines )
+//	{
+//        m_line_shader->Bind();
+//        
+//		ShaderUniform uni_world = m_line_shader->GetUniformLocation("world_mat");
+//		ShaderUniform uni_view = m_line_shader->GetUniformLocation("view_mat");
+//		m_line_shader->SetUniform(uni_view, view_mat);
+//		ShaderUniform uni_proj = m_line_shader->GetUniformLocation("proj_mat");
+//		m_line_shader->SetUniform(uni_proj, render_ctxt.m_proj_mat);
+//		ShaderUniform uni_color = m_line_shader->GetUniformLocation("color_info");
+//
+//		for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+//		{
+//			CoAttractor* attractor = m_attractors[att_idx];
+//            const AttractorOrientedCurve* curve_preview = attractor->GetCurvePreview();
+//            if (!curve_preview)
+//                continue;
+//            
+//			CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
+//			CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+//
+//			/*float sel_idx = -1.f;
+//			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+//			{
+//				AttractorHandle const& handle = cohandle->GetHandle(m_editor_selected.m_handle_idx);
+//				//sel_idx = (float)handle.m_mesh_idx;
+//			}*/
+//
+//			mat4 world_mat(copos->GetTransform().ToMat4());
+//			m_line_shader->SetUniform(uni_world, world_mat);
+//			m_line_shader->SetUniform(uni_color, vec3(0/*sel_idx*/, (float)1000.f/*attractor->m_view_handle_range*/, 1.0f));
+//			glBindVertexArray(attractor->m_varrays[CoAttractor::eVALinePoints]);
+//			const int line_count = curve_preview->points.size() - 1;
+//			glDrawArrays(GL_LINE_STRIP, 0, line_count);
+//			glBindVertexArray(0);
+//
+//		}
+//        
+//        m_line_shader->Unbind();
+//	}
 
 	m_mesh_shader->Bind();
 	{
@@ -147,19 +163,37 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 			//CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 
 			float alpha = 1.f;
-			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
-			{
-				alpha = 0.5f;
-			}
+//			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+//			{
+//				alpha = 0.5f;
+//			}
 
 			mat4 world_mat(copos->GetTransform().ToMat4());
 			m_mesh_shader->SetUniform(uni_world, world_mat);
-			m_mesh_shader->SetUniform(uni_color, vec3(-1.f/*sel_idx*/, (float)attractor->m_view_handle_range, alpha));
+			m_mesh_shader->SetUniform(uni_color, vec3(0.f/*sel_idx*/, (float)0.f/*attractor->m_view_handle_range*/, alpha));
 			glBindVertexArray(attractor->m_varrays[CoAttractor::eVAMesh]);
-			const int index_count = attractor->m_tri_indices.size();
-			glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
+            
+            ivec2 range_0, range_1;
+            attractor->GetMeshRenderOffsetsWithoutPreview(range_0, range_1);
+            if( range_0.y > range_0.x )
+                glDrawElements(GL_TRIANGLES, (GLsizei)(range_0.y - range_0.x), GL_UNSIGNED_INT, (void*)(range_0.x * sizeof(int32)));
+            if( range_1.y > range_1.x )
+                glDrawElements(GL_TRIANGLES, (GLsizei)(range_1.y - range_1.x), GL_UNSIGNED_INT, (void*)(range_1.x * sizeof(int32)));
+            
+            //static int offset = 3000;
+            //glDrawElements(GL_TRIANGLES, (GLsizei)(index_count - offset), GL_UNSIGNED_INT, 0/*(void*)(offset * sizeof(uint32))*/);
 			glBindVertexArray(0);
-
+            
+            if(attractor->GetCurvePreview())
+            {
+                m_mesh_shader->SetUniform(uni_color, vec3(1.f/*sel_idx*/, (float)0.f/*attractor->m_view_handle_range*/, alpha));
+                glBindVertexArray(attractor->m_varrays[CoAttractor::eVAMeshPreview]);
+                
+                const int index_count = attractor->m_tri_indices_preview.size();
+                glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
+                
+                glBindVertexArray(0);
+            }
 		}
 	}
 	m_mesh_shader->Unbind();
@@ -175,28 +209,29 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 		CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
 		CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
 
-		const int num_points = attractor->m_line_framed.points.size();
-		const float cube_size = 2.f * copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
+		//const int num_points = attractor->m_line_framed.points.size();
+		const float cube_size = 1.f * copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
 
 		int32 num_handle = cohandle->m_handles.size();
 		for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
 		{
 			AttractorHandle const& handle = cohandle->GetHandle(h_idx);
+            AttractorOrientedCurve& curve = attractor->m_curves[h_idx];
 			
-			if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
+			//if (handle.m_mesh_idx >= 0 && handle.m_mesh_idx < num_points)
 			{
-				vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_line_idx]);
-				quat world_line_handle_quat = copos->GetRotation() * attractor->m_line_framed.frames[handle.m_line_idx];
+                vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(handle.m_seed.seed * attractor->m_rescale_factor);
+                quat world_line_handle_quat = copos->GetRotation() * curve.frames[handle.m_idx_on_curve];
 				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && m_editor_selected.m_line_handle;
 				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && m_editor_hovered.m_line_handle;
 				u8vec4 line_col = is_line_selected ? u8vec4(255, 250, 130, 255) : is_line_hovered ? u8vec4(255, 127, 255, 255) : u8vec4(255, 0, 255, 255);
-				DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), line_col, 0.5f, 0.5f);
+				DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), line_col, 0.8f, 0.8f);
                 
-				vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
+				/*vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
 				bool is_mesh_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && !m_editor_selected.m_line_handle;
 				bool is_mesh_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && !m_editor_hovered.m_line_handle;
 				u8vec4 mesh_col = is_mesh_selected ? u8vec4(255, 250, 130, 255) : is_mesh_hovered ? u8vec4(160, 200, 255, 255) : u8vec4(0, 200, 255, 255);
-				DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size * 0.85f, mesh_col);
+				DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size * 0.85f, mesh_col);*/
 			}
 		}
 	}
@@ -204,7 +239,7 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 
 void AttractorManager::DrawAttractorSeeds(struct RenderContext& render_ctxt)
 {
-    for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
+    /*for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
     {
         CoAttractor* attractor = m_attractors[att_idx];
         CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
@@ -214,7 +249,7 @@ void AttractorManager::DrawAttractorSeeds(struct RenderContext& render_ctxt)
         vec3 world_seed_pos = copos->GetTransform().TransformPosition(attractor->m_line_params.seed * attractor->m_rescale_factor);
         
         DrawUtils::GetStaticInstance()->PushAABB(world_seed_pos, cube_size, seed_col);
-    }
+    }*/
 }
 
 void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
@@ -223,6 +258,12 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
     if (!allow_picking || !m_attractors.size())
     {
         return;
+    }
+    
+    // reset curve preview on selected attractor (we'll set it again after scene pick)
+    if (m_editor_selected.m_attractor)
+    {
+        m_editor_selected.m_attractor->m_preview_idx = INDEX_NONE;
     }
     
     // if not *dragging* (!mouse_state.m_left_down)
@@ -264,7 +305,7 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
 		{
 			if (attractor == m_editor_selected.m_attractor)
 			{
-				AttractorHandle& handle_selected = handle->GetHandle(m_editor_selected.m_handle_idx);
+				//AttractorHandle& handle_selected = handle->GetHandle(m_editor_selected.m_handle_idx);
                 
                 CoHandle::PickResult current_result;
                 if (handle->RayCast(cam_pos, ray_end, current_result))
@@ -272,8 +313,8 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
                     if (current_result.m_handle_idx == m_editor_selected.m_handle_idx)
                     {
                         // snap mesh to line
-                        if (!m_editor_selected.m_line_handle && current_result.m_is_line_pick)
-                            handle_selected.m_mesh_idx = handle_selected.m_line_idx;
+                        //if (!m_editor_selected.m_line_handle && current_result.m_is_line_pick)
+                        //    handle_selected.m_mesh_idx = handle_selected.m_line_idx;
                     }
                 }
                 else
@@ -288,12 +329,12 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
 
                         if (m_editor_selected.m_line_handle)
                         {
-                            handle_selected.m_line_idx = pick_result.m_line_idx;
+                            //handle_selected.m_line_idx = pick_result.m_line_idx;
                         }
-                        else
+                        /*else
                         {
                             handle_selected.m_mesh_idx = pick_result.m_line_idx;
-                        }
+                        }*/
                     }
 				}
 			}
@@ -332,6 +373,12 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
             m_editor_selected.m_handle_idx = INDEX_NONE;
         }
 	}
+    
+    // toggle curve preview on selected attractor
+    if (m_editor_selected.m_attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
+    {
+        m_editor_selected.m_attractor->m_preview_idx = m_editor_selected.m_handle_idx;
+    }
 
 	// save button state to detect dragging next time
 	m_prev_mouse_left_down = mouse_state.m_left_down;

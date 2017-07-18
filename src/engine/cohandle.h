@@ -35,7 +35,8 @@ public:
     
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
-	bool				HasHandleArrayChanged();
+	bool				HasAnyHandleChanged();
+    bool				HasHandleChanged(int32 h_idx);
 	void				SaveHandleArray();
     void                InsertHandle(int32 at_idx);
     void                DeleteHandle(int32 at_idx);

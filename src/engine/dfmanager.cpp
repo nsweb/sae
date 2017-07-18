@@ -13,7 +13,9 @@
 
 STATIC_MANAGER_CPP(DFManager);
 
-DFManager::DFManager()
+DFManager::DFManager() :
+    m_bg_shader(nullptr),
+    m_scene_center(vec3(0.f))
 {
 	m_pStaticInstance = this;
 }
@@ -132,10 +134,12 @@ void DFManager::_Render( RenderContext& render_ctxt )
     ShaderUniform uni_proj = m_bg_shader->GetUniformLocation("proj_mat");
     m_bg_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
 
-	ShaderUniform uni_sr = m_bg_shader->GetUniformLocation("screen_res");
-	m_bg_shader->SetUniform( uni_sr, screen_res );
 	ShaderUniform uni_zvar = m_bg_shader->GetUniformLocation("z_var");
 	m_bg_shader->SetUniform( uni_zvar, z_var );
+    ShaderUniform uni_sr = m_bg_shader->GetUniformLocation("screen_res");
+    m_bg_shader->SetUniform( uni_sr, screen_res );
+    ShaderUniform uni_sc = m_bg_shader->GetUniformLocation("scene_center");
+    m_bg_shader->SetUniform( uni_sc, m_scene_center );
 
 	//level->InterpAndSetUniforms( ship_time );
 

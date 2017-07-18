@@ -21,6 +21,8 @@ enum eAttractorType
 	eAttractor_LorentzMod2,
     eAttractor_Hadley,
     eAttractor_LorentzMod1,
+    eAttractor_LotkaVolterra,
+    eAttractor_Halvorsen,
     eAttractor_SpiralTest,
 	eAttractor_MAX
 };
@@ -421,6 +423,65 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
+class LotkaVolterraAttractor : public StrangeAttractor
+{
+public:
+    float m_a, m_b, m_c;
+    
+    LotkaVolterraAttractor()
+    {
+        m_type = eAttractor_LotkaVolterra;
+        m_a = 2.9851f;
+        m_b = 3.0f;
+        m_c = 2.0f;
+        
+        m_init_point = vec3( 5.0f, 5.0f, 5.0f );
+        //m_max_iter = 2000;
+        
+        //m_fatness_scale = 0.25f;
+        m_dt = 0.0025f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    {
+        DP.x = P.x * (1.0f - P.y + P.x*(m_c - m_a*P.z));
+        DP.y = P.y * (-1.0f + P.x);
+        DP.z = P.z * (-m_b + m_a*P.x*P.x);
+    }
+    
+    virtual const char* GetClassName() const override  { return "LotkaVolterra"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new LotkaVolterraAttractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class HalvorsenAttractor : public StrangeAttractor
+{
+public:
+    float m_a;
+    
+    HalvorsenAttractor()
+    {
+        m_type = eAttractor_Halvorsen;
+        m_a = 1.4f;
+        
+        m_init_point = vec3( 5.0f, 5.0f, 5.0f );
+        m_dt = 0.0025f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    {
+        DP.x = -m_a*P.x - 4.f*P.y - 4.f*P.z - P.y*P.y;
+        DP.y = -m_a*P.y - 4.f*P.z - 4.f*P.x - P.z*P.z;
+        DP.z = -m_a*P.z - 4.f*P.x - 4.f*P.y - P.x*P.x;
+    }
+    
+    virtual const char* GetClassName() const override  { return "Halvorsen"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new HalvorsenAttractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
 class SpiralTestAttractor : public StrangeAttractor
 {
 public:
@@ -483,14 +544,24 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-
+struct AttractorSeedParams
+{
+    vec3 seed = vec3(1.f, 1.f, 1.f);
+    int32 iter = 2000;
+    int32 rev_iter = 0;
+    
+    bool operator == (AttractorSeedParams const& oth)
+    {
+        return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter;
+    }
+};
 
 struct AttractorLineParams
 {
-	vec3 seed;
-	int32 iter;
-	int32 rev_iter;
-	int32 warmup_iter;
+	//vec3 seed;
+	//int32 iter;
+	//int32 rev_iter;
+	//int32 warmup_iter;
 	float step_factor;
 	float target_dim;
 
@@ -500,10 +571,10 @@ struct AttractorLineParams
 	float shearing_scale_y;
 
 	AttractorLineParams() :
-		seed(1.f, 1.f, 1.f),
-		iter(2000),
-		rev_iter(0),
-		warmup_iter(200),
+		//seed(1.f, 1.f, 1.f),
+		//iter(2000),
+		//rev_iter(0),
+		//warmup_iter(200),
 		step_factor(4.f),
 		target_dim(0.f),
 		shearing_angle(0.f),
@@ -513,7 +584,7 @@ struct AttractorLineParams
 
 	bool operator == (AttractorLineParams& oth)
 	{
-		return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && warmup_iter == oth.warmup_iter && step_factor == oth.step_factor 
+		return /*seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && warmup_iter == oth.warmup_iter &&*/ step_factor == oth.step_factor
 			&& target_dim == oth.target_dim && shearing_angle == oth.shearing_angle && shearing_scale_x == oth.shearing_scale_x && shearing_scale_y == oth.shearing_scale_y;
 	}
 };
@@ -570,51 +641,30 @@ struct AttractorShapeParams
     void Serialize(class Archive& file);
 };
 
+//////////////////////////////////////////////////////////////////////////
 struct AttractorHandle
 {
 public:
-    AttractorHandle() : m_type(eHT_Move)	{}
+    AttractorHandle() : m_idx_on_curve(0)	{}
 	~AttractorHandle()	{}
 
 	bool operator == (AttractorHandle const& oth)
 	{
-		return /*m_transform == oth.m_transform
-			   &&*/ m_type == oth.m_type && m_line_idx == oth.m_line_idx && m_mesh_idx == oth.m_mesh_idx;
+		return m_seed == oth.m_seed;
 	}
 
-    enum eHandleType : int32
+    /*enum eHandleType : int32
 	{
 		eHT_Move,
 		eHT_Cut,
         eHT_Count
-	};
+	};*/
 
 	//transform	m_transform;
-	eHandleType	m_type;
-	int32		m_line_idx;
-	int32		m_mesh_idx;
-};
-
-struct AttractorFreeHandle
-{
-public:
-	AttractorFreeHandle() {}
-	~AttractorFreeHandle()	{}
-
-	bool operator == (AttractorHandle const& oth)
-	{
-		return m_line_idx == oth.m_line_idx;
-	}
-
-	enum eHandleType : int32
-	{
-		eHT_Move,
-		eHT_Cut,
-		eHT_Count
-	};
-
-	int32		m_line_idx;
-	
+	//eHandleType	m_type;
+    AttractorSeedParams m_seed;
+	int32               m_idx_on_curve;
+	//int32             m_mesh_idx;
 };
 
 struct AABB
@@ -662,9 +712,10 @@ struct AttractorSnapRangeEx : public AttractorSnapRange
     }
 };
 
-struct AttractorLineFramed
+//////////////////////////////////////////////////////////////////////////
+struct AttractorOrientedCurve
 {
-	AttractorLineFramed()	{}
+	AttractorOrientedCurve()	{}
 	void Clear()
 	{
 		points.clear();
@@ -742,24 +793,24 @@ struct SAGrid
 namespace SAUtils
 {
 
-	void		ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorLineParams const& params, Array<vec3>& line_points /*out*/, float& rescale_factor/*out*/);
-	//void		ComputeStrangeAttractor(StrangeAttractor* attractor, vec3 seed, int32 iter);
-	void		GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& Params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/);
+	void		ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
+	void		GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, float rescale_factor, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets);
+    void		GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
 
-	void        GenerateFrames(AttractorLineFramed& line_framed);
-    void        GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
-	void		GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const bool blend_positions);
-    void        GenerateColors(AttractorLineFramed& line_framed, float color);
-	void		MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
-	void		MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
-    void		MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
-    void		MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
-    void		MergeLinePoints5(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines);
+	void        GenerateFrames(AttractorOrientedCurve& line_framed);
+    void        GenerateFrames(AttractorOrientedCurve& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
+	void		GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& framed_lines /*out*/, const bool blend_positions);
+    void        GenerateColors(AttractorOrientedCurve& line_framed, float color);
+	void		MergeLinePoints(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
+	void		MergeLinePoints2(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
+    void		MergeLinePoints3(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
+    void		MergeLinePoints4(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
+    void		MergeLinePoints5(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
     
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
-	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, /*const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles,*/ const AttractorShapeParams& params);
+	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorOrientedCurve const & line_framed, /*const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles,*/ const AttractorShapeParams& params);
 
 	//void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices );

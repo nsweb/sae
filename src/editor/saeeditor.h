@@ -34,11 +34,12 @@ public:
 	virtual bool        Init();
 	virtual void        Shutdown();
     
-    static SAEEditor*	Get()		{ return ms_peditor;	}
+    static SAEEditor*	Get()		{ return ms_editor;	}
     
     void                UIDrawEditor( bool* bshow_editor, bigball::RenderContext& render_ctxt );
 	void				UIDrawEditorMenus(bigball::RenderContext& render_ctxt);
 	void				HandleScenePick(ControllerMouseState const& mouse_state);
+    void                Tick( struct TickContext& tick_ctxt );
     
     int                 m_current_attractor_type;
 	String				m_current_file_path;
@@ -48,7 +49,7 @@ public:
 	eMenuCommandType	m_current_menu_cmd_type;
     
 private:
-    static SAEEditor*    ms_peditor;
+    static SAEEditor*    ms_editor;
 
 	static bool			GetItemStringArray( void* data, int idx, const char** out_text );
     

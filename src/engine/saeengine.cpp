@@ -15,16 +15,16 @@
 #include "../engine/saecamera.h"
 #include "../editor/saeeditor.h"
 
-SAEEngine* SAEEngine::ms_pengine = nullptr;
+SAEEngine* SAEEngine::ms_engine = nullptr;
 
 SAEEngine::SAEEngine()
 {
-	ms_pengine = this;
+	ms_engine = this;
 }
 
 SAEEngine::~SAEEngine()
 {
-	ms_pengine = nullptr;
+	ms_engine = nullptr;
 }
 
 bool SAEEngine::Init(EngineInitParams const& init_params)
@@ -34,8 +34,8 @@ bool SAEEngine::Init(EngineInitParams const& init_params)
 	bool bInit = Engine::Init(init_params);
     
     //////////////////////////////////////////////////////////////////////////
-	m_peditor = new SAEEditor();
-	m_peditor->Init();
+	m_editor = new SAEEditor();
+	m_editor->Init();
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -68,8 +68,8 @@ bool SAEEngine::Init(EngineInitParams const& init_params)
 
 void SAEEngine::Shutdown()
 {
-	m_peditor->Shutdown();
-	BB_DELETE( m_peditor );
+	m_editor->Shutdown();
+	BB_DELETE( m_editor );
 
 	Engine::Shutdown();
 }
@@ -96,9 +96,9 @@ void SAEEngine::DeclareComponentsAndEntities()
 
 void SAEEngine::CreateGameCameras()
 {
-	Controller* pController = Controller::GetStaticInstance();
-	pController->RegisterCameraCtrl( new SAECameraCtrl_Editor() );
-	pController->SetActiveCameraCtrl( SAECameraCtrl_Editor::StaticClass() );
+	Controller* controller = Controller::GetStaticInstance();
+	controller->RegisterCameraCtrl( new SAECameraCtrl_Editor() );
+	controller->SetActiveCameraCtrl( SAECameraCtrl_Editor::StaticClass() );
 }
 
 void SAEEngine::InitManagers()
@@ -117,6 +117,13 @@ void SAEEngine::InitManagers()
 void SAEEngine::DestroyManagers()
 {
 	Super::DestroyManagers();
+}
+
+void SAEEngine::PreTickManagers( struct TickContext& tick_ctxt )
+{
+    Super::PreTickManagers(tick_ctxt);
+    
+    m_editor->Tick(tick_ctxt);
 }
 
 bool SAEEngine::RunCommand( String const& cmd_type, Array<String> const& switches, Array<String> const& tokens )

@@ -7,9 +7,9 @@
 #include "core/sort.h"
 
 
-void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorLineParams const& params, Array<vec3>& line_points, float& rescale_factor)
+void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, Array<vec3>& line_points)
 {
-    vec3 seed = params.seed;
+    vec3 seed = seed_params.seed;
     attractor.m_init_point = seed;
     
     float init_dt = attractor.m_dt;
@@ -18,18 +18,18 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, Attract
     attractor.m_dt = init_dt * params.step_factor;
     attractor.m_adaptative_dist = init_ad * params.step_factor;
     
-    if (params.warmup_iter > 0)
+    /*if (params.warmup_iter > 0)
     {
         attractor.LoopAdaptative(line_points, params.warmup_iter);
         seed = line_points.Last();
         attractor.m_init_point = line_points.Last();
         line_points.clear();
-    }
+    }*/
     
-    if (params.rev_iter > 0)
+    if (seed_params.rev_iter > 0)
     {
         attractor.m_dt = -attractor.m_dt;
-        attractor.LoopAdaptative(line_points, params.rev_iter);
+        attractor.LoopAdaptative(line_points, seed_params.rev_iter);
         
         const int32 nb_point = line_points.size();
         for (int32 i = 0; i < nb_point / 2; i++)
@@ -39,7 +39,7 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, Attract
         attractor.m_dt = -attractor.m_dt;
     }
     
-    attractor.LoopAdaptative(line_points, params.iter);
+    attractor.LoopAdaptative(line_points, seed_params.iter);
     
     if (params.shearing_scale_x != 1.f || params.shearing_scale_y != 1.f || params.shearing_angle != 0.f)
     {
@@ -54,27 +54,6 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, Attract
             line_points[i].x = rot_x * cf + rot_y * sf;
             line_points[i].y = rot_x * -sf + rot_y * cf;
         }
-    }
-    
-    // Adapt size
-    if (params.target_dim > 0.0)
-    {
-        vec3 min_pos(FLT_MAX, FLT_MAX, FLT_MAX), max_pos(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-        for (int32 i = 0; i < line_points.size(); ++i)
-        {
-            min_pos.x = bigball::min(min_pos.x, line_points[i].x);
-            min_pos.y = bigball::min(min_pos.y, line_points[i].y);
-            min_pos.z = bigball::min(min_pos.z, line_points[i].z);
-            max_pos.x = bigball::max(max_pos.x, line_points[i].x);
-            max_pos.y = bigball::max(max_pos.y, line_points[i].y);
-            max_pos.z = bigball::max(max_pos.z, line_points[i].z);
-        }
-        vec3 V = max_pos - min_pos;
-        float dim_max = max(max(V.x, V.y), V.z);
-        float rescale = params.target_dim / dim_max;
-        rescale_factor = rescale;
-        for (int32 i = 0; i < line_points.size(); ++i)
-            line_points[i] *= rescale;
     }
     
     attractor.m_dt = init_dt;
@@ -110,7 +89,7 @@ static void PrintBary(SABarycenterRef const* bary, int32 bary_idx, float dist)
     BB_LOG(SAUtils, Log, str_debug.c_str());
 }
 
-void SAUtils::MergeLinePoints5(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints5(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints5\n");
     
@@ -161,7 +140,7 @@ void SAUtils::MergeLinePoints5(AttractorLineFramed const& line_framed, const Arr
     GenerateSnappedLinesWithFrames(line_framed.points, line_framed.frames, line_framed.follow_angles, snap_ranges, shape_params, snapped_lines, blend_position);
 }
 
-void SAUtils::MergeLinePoints4(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints4(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints4\n");
     
@@ -283,9 +262,9 @@ if(!shape_params.show_bary)
     }
 }
     
-    AttractorLineFramed new_framed;
+    AttractorOrientedCurve new_framed;
     snapped_lines.push_back(new_framed);
-    AttractorLineFramed& ref_framed = snapped_lines.Last();
+    AttractorOrientedCurve& ref_framed = snapped_lines.Last();
     
     ref_framed.points = line_points;
     ref_framed.colors.resize(nb_points, 0.f);
@@ -293,7 +272,7 @@ if(!shape_params.show_bary)
     GenerateFrames(ref_framed);
 }
 
-void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints3(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints3\n");
     
@@ -488,9 +467,9 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     {
         for (int chain_idx = 0; chain_idx < grid.bary_chains.size(); chain_idx++)
         {
-            AttractorLineFramed new_framed;
+            AttractorOrientedCurve new_framed;
             snapped_lines.push_back(new_framed);
-            AttractorLineFramed& ref_framed = snapped_lines.Last();
+            AttractorOrientedCurve& ref_framed = snapped_lines.Last();
             
             int bary_idx = grid.bary_chains[chain_idx];
             SABarycenterRef const* bary;
@@ -516,17 +495,17 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
     {
         // interpolate weights
         // 3- Parse segment in order, smoothly lerp current blend weight of seg to next barycenter, and compute new position
-        //AttractorLineFramed* new_framed = nullptr;
-        AttractorLineFramed new_framed;
+        //AttractorOrientedCurve* new_framed = nullptr;
+        AttractorOrientedCurve new_framed;
         snapped_lines.push_back(new_framed);
-        AttractorLineFramed& ref_framed = snapped_lines.Last();
+        AttractorOrientedCurve& ref_framed = snapped_lines.Last();
         if (nb_points < 2)
         {
             return;
         }
         
         int bary_counter = 0;
-        static int max_bary_counter = 30;
+        //static int max_bary_counter = 30;
         vec3 previous_interp_pos = line_points[0];
         vec3 previous_interp_dir = normalize(line_points[1] - line_points[0]);
         vec3 previous_dir_to_bary = orthogonal(previous_interp_dir);
@@ -705,7 +684,7 @@ void SAUtils::MergeLinePoints3(AttractorLineFramed const& line_framed, const Arr
 }
 
 // Second iteration of MergeLinePoints
-void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints2(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints2\n");
     
@@ -745,7 +724,7 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
                         // compute relative weights of snap and compute reverse infos
                         ComputeReverseSnapRangeExInfo(line_framed.points, shape_params.merge_dist, snap_range);
                         
-                        AttractorLineFramed& ref_framed = snapped_lines.Last();
+                        AttractorOrientedCurve& ref_framed = snapped_lines.Last();
                         
                         for (int d_idx = 0; d_idx < snap_range.dst_seg_array.size(); d_idx++)
                         {
@@ -822,7 +801,7 @@ void SAUtils::MergeLinePoints2(AttractorLineFramed const& line_framed, const Arr
     }
 }
 
-void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& snapped_lines)
+void SAUtils::MergeLinePoints(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
 {
     BB_LOG(SAUtils, Log, "MergeLinePoints\n");
     
@@ -936,9 +915,9 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
             if (end_idx - start_idx < 3)
                 continue;
             
-            AttractorLineFramed new_framed;
+            AttractorOrientedCurve new_framed;
             snapped_lines.push_back(new_framed);
-            AttractorLineFramed& ref_framed = snapped_lines.Last();
+            AttractorOrientedCurve& ref_framed = snapped_lines.Last();
             
             int cur_seg_0 = INDEX_NONE;
             const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
@@ -1039,7 +1018,7 @@ void SAUtils::MergeLinePoints(AttractorLineFramed const& line_framed, const Arra
 //	- handles the case where multiple lines would snap on the same area / segments
 //  - suppose line_points was already modified / interpolated; not line_frames nor follow_angles
 //  - if blend_positions is true, resulting points in framed_lines will be smoothed out otherwise line_points positions will be copied as is
-void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorLineFramed>& framed_lines /*out*/, const bool blend_positions)
+void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, const Array<quat>& line_frames, const Array<float>& follow_angles, const Array<AttractorSnapRange>& snap_ranges, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& framed_lines /*out*/, const bool blend_positions)
 {
     const int32 interp_spacing = shape_params.merge_span;
     
@@ -1077,9 +1056,9 @@ void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, con
 			if (end_idx - start_idx < 2*interp_spacing + 2)
 				continue;
 
-			AttractorLineFramed new_framed;
+			AttractorOrientedCurve new_framed;
 			framed_lines.push_back(new_framed);
-			AttractorLineFramed& cur_framed = framed_lines.Last();
+			AttractorOrientedCurve& cur_framed = framed_lines.Last();
 
 			int cur_seg_0 = INDEX_NONE;
 			//const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
@@ -1189,9 +1168,9 @@ void SAUtils::GenerateSnappedLinesWithFrames(const Array<vec3>& line_points, con
 	}
 	else
 	{
-		AttractorLineFramed new_framed;
+		AttractorOrientedCurve new_framed;
 		framed_lines.push_back(new_framed);
-		AttractorLineFramed& cur_framed = framed_lines.Last();
+		AttractorOrientedCurve& cur_framed = framed_lines.Last();
 		cur_framed.points = line_points;
         cur_framed.colors.resize(line_points.size(), 0.f);
 
@@ -1404,8 +1383,8 @@ bool SAUtils::ComputeReverseSnapRangeExInfo(const Array<vec3>& points, float mer
     }
     
     // compute weighting info
-    static float test = 2.f;
-    float res = smoothstep(test);
+    //static float test = 2.f;
+    //float res = smoothstep(test);
     const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
     {
         const int dst_seg_count = snap_range.dst_seg_array.size();
@@ -1573,21 +1552,34 @@ int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, i
     return best_seg;
 }
 
-void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/)
+void SAUtils::GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets)
 {
     Array<vec3> local_shape;
     GenerateLocalShape(local_shape, params);
     const int32 num_local_points = local_shape.size();
     
-    for (int line_idx = 0; line_idx < snapped_lines.size(); line_idx++)
+    for (int line_idx = 0; line_idx < curves.size(); line_idx++)
     {
-        AttractorLineFramed const & line_framed = snapped_lines[line_idx];
+        AttractorOrientedCurve const & curve = curves[line_idx];
         
+        if(indice_offsets)
+            indice_offsets->push_back(tri_indices.size());
         int32 base_vertex = tri_vertices.size();
-        GenerateTriVertices(tri_vertices, tri_normals, tri_colors, local_shape, line_framed, params);
         
+        GenerateTriVertices(tri_vertices, tri_normals, tri_colors, local_shape, curve, params);
         GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
     }
+}
+
+void SAUtils::GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
+{
+    Array<vec3> local_shape;
+    GenerateLocalShape(local_shape, params);
+    const int32 num_local_points = local_shape.size();
+
+    int32 base_vertex = tri_vertices.size();
+    GenerateTriVertices(tri_vertices, tri_normals, nullptr, local_shape, curve, params);
+    GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
 }
 
 
@@ -1595,7 +1587,7 @@ void SAUtils::GenerateSolidMesh(Array<AttractorLineFramed> const& snapped_lines,
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void SAUtils::GenerateColors(AttractorLineFramed& line_framed, float color)
+void SAUtils::GenerateColors(AttractorOrientedCurve& line_framed, float color)
 {
     int32 nb_points = line_framed.points.size();
     line_framed.colors.resize(nb_points);
@@ -1605,7 +1597,7 @@ void SAUtils::GenerateColors(AttractorLineFramed& line_framed, float color)
     }
 }
 
-void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
+void SAUtils::GenerateFrames(AttractorOrientedCurve& line_framed)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vy_prev(1.f, 0.f, 0.f);
@@ -1663,7 +1655,7 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed)
     follow_angles[line_points.size() - 1] = follow_angles[line_points.size() - 2];
 }
 
-void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector, vec3* end_vector)
+void SAUtils::GenerateFrames(AttractorOrientedCurve& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector, vec3* end_vector)
 {
     vec3 P_prev, P_current, P_next, vz_follow;
     vec3 vy_prev(1.f, 0.f, 0.f);
@@ -1736,7 +1728,7 @@ void SAUtils::GenerateFrames(AttractorLineFramed& line_framed, int from_idx, int
         frames[to_idx] = frames[to_idx - 1];
 }
 
-void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorLineFramed const & line_framed, const AttractorShapeParams& params)
+void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorOrientedCurve const & line_framed, const AttractorShapeParams& params)
 {
     const Array<vec3>& line_points = line_framed.points;
     const Array<float>& colors = line_framed.colors;
@@ -2262,6 +2254,8 @@ void AttractorFactory::Create()
     m_all_attractors[eAttractor_LorentzMod2] = new LorentzMod2Attractor;
     m_all_attractors[eAttractor_Hadley] = new HadleyAttractor;
     m_all_attractors[eAttractor_LorentzMod1] = new LorentzMod1Attractor;
+    m_all_attractors[eAttractor_LotkaVolterra] = new LotkaVolterraAttractor;
+    m_all_attractors[eAttractor_Halvorsen] = new HalvorsenAttractor;
     m_all_attractors[eAttractor_SpiralTest] = new SpiralTestAttractor;
 }
 

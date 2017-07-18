@@ -67,15 +67,18 @@ public:
     AttractorSelection  m_editor_selected;
 	AttractorSelection  m_editor_hovered;
     float               m_attractor_seed_range;
+    float               m_attractor_seed_move_range;
     
     Shader*             m_bg_shader;
     Shader*             m_line_shader;
     Shader*             m_mesh_shader;
 	bool				m_show_handles;
     bool                m_show_lines;
-    bool				m_show_seeds;
+    //bool				m_show_seeds;
     bool                m_prev_mouse_left_down;
 
+    //void				UpdateAttractorVertexBuffers(struct RenderContext& render_ctxt);
+    void                UpdateAttractorMeshes();
 	void				DrawAttractors(struct RenderContext& render_ctxt);
 	void				DrawHandles(struct RenderContext& render_ctxt);
     void				DrawAttractorSeeds(struct RenderContext& render_ctxt);
