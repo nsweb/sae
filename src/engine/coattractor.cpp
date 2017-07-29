@@ -164,33 +164,39 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
         }
     }
 
-    if (need_update_mesh_buffer || need_update_preview_buffer)
+    if (need_update_mesh_buffer)
     {
-        m_rescale_factor = 1.f;
         // Adapt size
-        if (params.target_dim > 0.0)
+        if (m_line_params.target_dim > 0.0)
         {
             vec3 min_pos(FLT_MAX, FLT_MAX, FLT_MAX), max_pos(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-            for (int32 i = 0; i < line_points.size(); ++i)
+            for (int h_idx = 0; h_idx < num_handle; h_idx++)
             {
-                min_pos.x = bigball::min(min_pos.x, line_points[i].x);
-                min_pos.y = bigball::min(min_pos.y, line_points[i].y);
-                min_pos.z = bigball::min(min_pos.z, line_points[i].z);
-                max_pos.x = bigball::max(max_pos.x, line_points[i].x);
-                max_pos.y = bigball::max(max_pos.y, line_points[i].y);
-                max_pos.z = bigball::max(max_pos.z, line_points[i].z);
+                AttractorOrientedCurve& curve = m_curves[h_idx];
+                for (int32 i = 0; i < curve.points.size(); ++i)
+                {
+                    min_pos.x = bigball::min(min_pos.x, curve.points[i].x);
+                    min_pos.y = bigball::min(min_pos.y, curve.points[i].y);
+                    min_pos.z = bigball::min(min_pos.z, curve.points[i].z);
+                    max_pos.x = bigball::max(max_pos.x, curve.points[i].x);
+                    max_pos.y = bigball::max(max_pos.y, curve.points[i].y);
+                    max_pos.z = bigball::max(max_pos.z, curve.points[i].z);
+                }
             }
             vec3 V = max_pos - min_pos;
             float dim_max = max(max(V.x, V.y), V.z);
-            float rescale = params.target_dim / dim_max;
-            rescale_factor = rescale;
-            
+            float rescale = m_line_params.target_dim / dim_max;
+            m_rescale_factor = rescale;
         }
-        else
-            rescale_factor = 1.f;
         
-        for (int32 i = 0; i < line_points.size(); ++i)
-            line_points[i] *= rescale;
+        /*for (int h_idx = 0; h_idx < num_handle; h_idx++)
+        {
+            AttractorOrientedCurve& curve = m_curves[h_idx];
+            for (int32 i = 0; i < curve.points.size(); ++i)
+            {
+                curve.points[i] *= m_rescale_factor;
+            }
+        }*/
     }
     
     // preview geometry
@@ -205,7 +211,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
 
             m_shape_params.weld_vertex = false;
             
-            SAUtils::GenerateSolidMesh(*curve_preview, m_shape_params, m_tri_vertices_preview, &m_tri_normals_preview, m_tri_indices_preview);
+            SAUtils::GenerateSolidMesh(*curve_preview, m_shape_params, m_tri_vertices_preview, &m_tri_normals_preview, m_tri_indices_preview, m_rescale_factor);
             
             need_update_preview_buffer = true;
         }
@@ -221,7 +227,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
         
         m_shape_params.weld_vertex = false;
         
-        SAUtils::GenerateSolidMesh(m_curves, m_shape_params, m_tri_vertices, &m_tri_normals, nullptr, m_tri_indices, &m_indice_offsets);
+        SAUtils::GenerateSolidMesh(m_curves, m_shape_params, m_tri_vertices, &m_tri_normals, nullptr, m_tri_indices, &m_indice_offsets, m_rescale_factor);
         
         need_update_mesh_buffer = true;
     }
@@ -586,7 +592,7 @@ void CoAttractor::ExportAsObj(Archive& file)
     AttractorShapeParams shape_params_export = m_shape_params;
     shape_params_export.weld_vertex = true;
     
-    SAUtils::GenerateSolidMesh(m_curves, shape_params_export, tri_vertices_export, nullptr, nullptr, tri_indices_export, nullptr);
+    SAUtils::GenerateSolidMesh(m_curves, shape_params_export, tri_vertices_export, nullptr, nullptr, tri_indices_export, nullptr, m_rescale_factor);
     
     SAUtils::WriteObjFile(file, m_tri_vertices, m_tri_indices);
 }

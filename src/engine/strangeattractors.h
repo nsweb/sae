@@ -794,8 +794,8 @@ namespace SAUtils
 {
 
 	void		ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
-	void		GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, float rescale_factor, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets);
-    void		GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/);
+    void        GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets, float rescale_factor);
+    void        GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/, float rescale_factor);
 
 	void        GenerateFrames(AttractorOrientedCurve& line_framed);
     void        GenerateFrames(AttractorOrientedCurve& line_framed, int from_idx, int to_idx, bool start_continuity, bool end_continuity, vec3* start_vector = nullptr, vec3* end_vector = nullptr);
@@ -810,7 +810,7 @@ namespace SAUtils
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
 	void		GenerateTriIndices(const Array<vec3>& tri_vertices, int32 nLocalPoints, Array<int32>& tri_indices /*out*/, const bool weld_vertex, int32 base_vertex);
-	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorOrientedCurve const & line_framed, /*const Array<vec3>& line_points, const Array<quat>& frames, const Array<float>& follow_angles,*/ const AttractorShapeParams& params);
+	void		GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, const AttractorOrientedCurve& curve, const AttractorShapeParams& params, float rescale_factor);
 
 	//void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices );

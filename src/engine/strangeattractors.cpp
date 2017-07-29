@@ -1552,7 +1552,7 @@ int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, i
     return best_seg;
 }
 
-void SAUtils::GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets)
+void SAUtils::GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets, float rescale_factor)
 {
     Array<vec3> local_shape;
     GenerateLocalShape(local_shape, params);
@@ -1566,19 +1566,19 @@ void SAUtils::GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, con
             indice_offsets->push_back(tri_indices.size());
         int32 base_vertex = tri_vertices.size();
         
-        GenerateTriVertices(tri_vertices, tri_normals, tri_colors, local_shape, curve, params);
+        GenerateTriVertices(tri_vertices, tri_normals, tri_colors, local_shape, curve, params, rescale_factor);
         GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
     }
 }
 
-void SAUtils::GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/)
+void SAUtils::GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/, float rescale_factor)
 {
     Array<vec3> local_shape;
     GenerateLocalShape(local_shape, params);
     const int32 num_local_points = local_shape.size();
 
     int32 base_vertex = tri_vertices.size();
-    GenerateTriVertices(tri_vertices, tri_normals, nullptr, local_shape, curve, params);
+    GenerateTriVertices(tri_vertices, tri_normals, nullptr, local_shape, curve, params, rescale_factor);
     GenerateTriIndices(tri_vertices, num_local_points, tri_indices, params.weld_vertex, base_vertex);
 }
 
@@ -1728,12 +1728,12 @@ void SAUtils::GenerateFrames(AttractorOrientedCurve& line_framed, int from_idx, 
         frames[to_idx] = frames[to_idx - 1];
 }
 
-void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, AttractorOrientedCurve const & line_framed, const AttractorShapeParams& params)
+void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_normals, Array<float>* tri_colors, const Array<vec3>& local_shape, const AttractorOrientedCurve& curve, const AttractorShapeParams& params, float rescale_factor)
 {
-    const Array<vec3>& line_points = line_framed.points;
-    const Array<float>& colors = line_framed.colors;
-    const Array<quat>& frames = line_framed.frames;
-    const Array<float>& follow_angles = line_framed.follow_angles;
+    const Array<vec3>& line_points = curve.points;
+    const Array<float>& colors = curve.colors;
+    const Array<quat>& frames = curve.frames;
+    const Array<float>& follow_angles = curve.follow_angles;
     
     const int32 base_vertex = tri_vertices.size();
     vec3 P_prev, P_current, P_next, VX_follow;
@@ -1755,8 +1755,8 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
         //else if (i >= line_framed.snap_ranges.z) // snap in
         //    color = lerp(0.f, 1.f, float(i - line_framed.snap_ranges.z) / float(line_framed.snap_ranges.w - line_framed.snap_ranges.z));
         
-        P_prev = line_points[i - 1];
-        P_current = line_points[i];
+        P_prev = line_points[i - 1] * rescale_factor;
+        P_current = line_points[i] * rescale_factor;
         //P_next = merge_line_points[i+1];
         vec3 V0 = P_current - P_prev;
         //vec3 V1 = P_next - P_current;
@@ -1822,7 +1822,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
     
     // For capping...
     int32 ShapeWOCapCount = tri_vertices.size() - base_vertex;
-    tri_vertices.push_back(line_points[1]);
+    tri_vertices.push_back(line_points[1] * rescale_factor);
     vec3 start_normal = normalize(line_points[0] - line_points[1]);
     if (tri_normals)
         tri_normals->push_back(start_normal);
@@ -1847,7 +1847,7 @@ void SAUtils::GenerateTriVertices(Array<vec3>& tri_vertices, Array<vec3>* tri_no
         }
     }
     
-    tri_vertices.push_back(line_points[line_points.size() - 2]);
+    tri_vertices.push_back(line_points[line_points.size() - 2] * rescale_factor);
     vec3 end_normal = normalize(line_points[line_points.size() - 1] - line_points[line_points.size() - 2]);
     if (tri_normals)
         tri_normals->push_back(end_normal);
