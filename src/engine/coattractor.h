@@ -43,6 +43,7 @@ public:
     
     void                InsertCurve(int32 at_idx);
     void                DeleteCurve(int32 at_idx);
+    vec3                GuessCurvePos(int32 curve_idx, int32 at_seed_offset);
 
 	struct PickResult
 	{
@@ -69,6 +70,8 @@ public:
     Array<int32>            m_tri_indices_preview;
     
     Array<int32>            m_indice_offsets;
+    Array<int32>            m_show_curve_flags;
+    
     // dimensions of the attractor
     vec3                    m_min_box;
     vec3                    m_max_box;

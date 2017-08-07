@@ -37,8 +37,6 @@ class StrangeAttractor
 public:
 	eAttractorType	m_type;
 	vec3			m_init_point;
-	//int32			m_max_iter;
-	//float			m_fatness_scale;
 	float			m_dt;
 	float			m_adaptative_dist;
 
@@ -46,49 +44,50 @@ public:
     virtual ~StrangeAttractor() {}
 	virtual void Loop( Array<vec3>& out_pos, int32 iter_count ) const
 	{
-		vec3 P(m_init_point), DP;
+		vec3 P(m_init_point), dp;
 
 		for (int32 i = 0; i < iter_count; i++)
 		{
-			GetDerivatives( P, DP );
-			P += DP * m_dt;
+			GetDerivatives( P, dp );
+			P += dp * m_dt;
 			out_pos.push_back( P );
 		}
 	}
-	virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count) const
+	virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count, float step_factor, bool reverse) const
 	{
-		vec3 P( m_init_point ), DP;
-		float DRatio, Len;
-		float AdDt = bigball::abs(m_adaptative_dist / m_dt);
+		vec3 P( m_init_point ), dp;
+		float dratio, len;
+        float dt = (reverse ? -m_dt : m_dt);
+		float ad_dt = bigball::abs(m_adaptative_dist / dt);
+        dt *= step_factor;
 
 		for (int32 i = 0; i < iter_count; i++)
 		{
-			
-			GetDerivatives( P, DP );
-			Len = length(DP);
-			DRatio = AdDt / Len;
+			GetDerivatives( P, dp );
+			len = length(dp);
+			dratio = ad_dt / len;
 
-			P += DP * (DRatio * m_dt);
+			P += dp * (dratio * dt);
 			out_pos.push_back( P );
 		}
 	}
 	virtual void LoopCurl(Array<vec3>& out_pos, int32 iter_count) const
 	{
 		const float Eps = m_dt*0.1f;
-		vec3 P( m_init_point ), DPx0, DPx1, DPy0, DPy1, DPz0, DPz1, PCurl;
+		vec3 P( m_init_point ), dpx0, dpx1, dpy0, dpy1, dpz0, dpz1, PCurl;
 
 		for (int32 i = 0; i < iter_count; i++)
 		{
-			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), DPx0 );
-			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), DPx1 );
-			GetDerivatives( vec3( P.x, P.y - Eps, P.z ), DPy0 );
-			GetDerivatives( vec3( P.x, P.y + Eps, P.z ), DPy1 );
-			GetDerivatives( vec3( P.x, P.y, P.z - Eps ), DPz0 );
-			GetDerivatives( vec3( P.x, P.y, P.z + Eps ), DPz1 );
+			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), dpx0 );
+			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), dpx1 );
+			GetDerivatives( vec3( P.x, P.y - Eps, P.z ), dpy0 );
+			GetDerivatives( vec3( P.x, P.y + Eps, P.z ), dpy1 );
+			GetDerivatives( vec3( P.x, P.y, P.z - Eps ), dpz0 );
+			GetDerivatives( vec3( P.x, P.y, P.z + Eps ), dpz1 );
 
-			PCurl.x = ( (DPy1.z - DPy0.z) - (DPz1.y - DPz0.y) ) / (2*Eps);
-			PCurl.y = ( (DPz1.x - DPz0.x) - (DPx1.z - DPx0.z) ) / (2*Eps);
-			PCurl.z = ( (DPx1.y - DPx0.y) - (DPy1.x - DPy0.x) ) / (2*Eps);
+			PCurl.x = ( (dpy1.z - dpy0.z) - (dpz1.y - dpz0.y) ) / (2*Eps);
+			PCurl.y = ( (dpz1.x - dpz0.x) - (dpx1.z - dpx0.z) ) / (2*Eps);
+			PCurl.z = ( (dpx1.y - dpx0.y) - (dpy1.x - dpy0.x) ) / (2*Eps);
 
 			P += PCurl * m_dt;
 			out_pos.push_back( P );
@@ -97,27 +96,27 @@ public:
 	virtual void LoopGradient(Array<vec3>& out_pos, int32 iter_count) const
 	{
 		const float Eps = m_dt*0.1f;
-		vec3 P( m_init_point ), DPx0, DPx1, DPy0, DPy1, DPz0, DPz1, PN;
+		vec3 P( m_init_point ), dpx0, dpx1, dpy0, dpy1, dpz0, dpz1, PN;
 
 		for (int32 i = 0; i < iter_count; i++)
 		{
-			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), DPx0 );
-			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), DPx1 );
-			GetDerivatives( vec3( P.x, P.y - Eps, P.z ), DPy0 );
-			GetDerivatives( vec3( P.x, P.y + Eps, P.z ), DPy1 );
-			GetDerivatives( vec3( P.x, P.y, P.z - Eps ), DPz0 );
-			GetDerivatives( vec3( P.x, P.y, P.z + Eps ), DPz1 );
+			GetDerivatives( vec3( P.x - Eps, P.y, P.z ), dpx0 );
+			GetDerivatives( vec3( P.x + Eps, P.y, P.z ), dpx1 );
+			GetDerivatives( vec3( P.x, P.y - Eps, P.z ), dpy0 );
+			GetDerivatives( vec3( P.x, P.y + Eps, P.z ), dpy1 );
+			GetDerivatives( vec3( P.x, P.y, P.z - Eps ), dpz0 );
+			GetDerivatives( vec3( P.x, P.y, P.z + Eps ), dpz1 );
 
-			PN = vec3(      length(DPx1) - length(DPx0),
-							length(DPy1) - length(DPy0),
-							length(DPz1) - length(DPz0) );
+			PN = vec3(      length(dpx1) - length(dpx0),
+							length(dpy1) - length(dpy0),
+							length(dpz1) - length(dpz0) );
 			PN = normalize(PN);
 			P += PN * m_dt;
 			out_pos.push_back( P );
 		}
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const = 0;
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const = 0;
 	virtual const char* GetClassName() const = 0;
     virtual StrangeAttractor* NewClassObject() const = 0;
 };
@@ -145,11 +144,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = (m_sigma * (P.y - P.x));
-		DP.y = (P.x * (m_rho - P.z) - P.y);
-		DP.z = (P.x * P.y - m_beta * P.z);
+		dp.x = (m_sigma * (P.y - P.x));
+		dp.y = (P.x * (m_rho - P.z) - P.y);
+		dp.z = (P.x * P.y - m_beta * P.z);
 	}
 
 	virtual const char* GetClassName() const override  { return "Lorenz"; }
@@ -180,11 +179,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = P.y;
-		DP.y = P.z;
-		DP.z = (-m_alpha * P.x - m_beta * P.y - P.z + m_gamma * (P.x*P.x*P.x));
+		dp.x = P.y;
+		dp.y = P.z;
+		dp.z = (-m_alpha * P.x - m_beta * P.y - P.z + m_gamma * (P.x*P.x*P.x));
 	}
 
 	virtual const char* GetClassName() const override  { return "Arneodo"; }
@@ -214,11 +213,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = m_alpha * P.x - P.y * P.z;
-		DP.y = m_beta * P.y + P.x * P.z;
-		DP.z = m_gamma * P.z + P.x * P.y / 3.0f;
+		dp.x = m_alpha * P.x - P.y * P.z;
+		dp.y = m_beta * P.y + P.x * P.z;
+		dp.z = m_gamma * P.z + P.x * P.y / 3.0f;
 	}
 
 	virtual const char* GetClassName() const override { return "ChenLee"; }
@@ -246,11 +245,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = (P.z - m_b) * P.x - m_d * P.y;
-		DP.y = m_d * P.x + (P.z - m_b) * P.y;
-        DP.z = m_c + m_a * P.z - (bigball::pow(P.z, 3.0f) / 3.0f) - (bigball::pow(P.x, 2.0f) + bigball::pow(P.y, 2.0f)) * (1.0f + m_e*P.z) + m_f * P.z * bigball::pow(P.x, 3.0f);
+		dp.x = (P.z - m_b) * P.x - m_d * P.y;
+		dp.y = m_d * P.x + (P.z - m_b) * P.y;
+        dp.z = m_c + m_a * P.z - (bigball::pow(P.z, 3.0f) / 3.0f) - (bigball::pow(P.x, 2.0f) + bigball::pow(P.y, 2.0f)) * (1.0f + m_e*P.z) + m_f * P.z * bigball::pow(P.x, 3.0f);
 	}
 
 	virtual const char* GetClassName() const override  { return "Aizawa"; }
@@ -280,11 +279,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = m_alpha * (P.y - P.x) + m_delta * P.x * P.z;
-		DP.y = m_c * P.x - P.x * P.z + m_g * P.y;
-		DP.z = m_beta * P.z + P.x * P.y - m_epsilon * P.x * P.x;
+		dp.x = m_alpha * (P.y - P.x) + m_delta * P.x * P.z;
+		dp.y = m_c * P.x - P.x * P.z + m_g * P.y;
+		dp.z = m_beta * P.z + P.x * P.y - m_epsilon * P.x * P.x;
 	}
 	virtual const char* GetClassName() const override  { return "TSUCS2"; }
     virtual StrangeAttractor* NewClassObject() const override { return new TSUCS2Attractor; }
@@ -314,11 +313,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = m_alpha*(P.y - P.x) + m_delta*P.x*P.z; 
-		DP.y = m_rho*P.x + m_xhi*P.y - P.x*P.z;
-		DP.z = m_beta*P.z + P.x * P.y - m_epsilon*P.x*P.x;
+		dp.x = m_alpha*(P.y - P.x) + m_delta*P.x*P.z; 
+		dp.y = m_rho*P.x + m_xhi*P.y - P.x*P.z;
+		dp.z = m_beta*P.z + P.x * P.y - m_epsilon*P.x*P.x;
 	}
 
 	virtual const char* GetClassName() const override  { return "DequanLi"; }
@@ -347,11 +346,11 @@ public:
 		m_adaptative_dist = 0.24f;
 	}
 
-	virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
-		DP.x = -m_alpha*P.x + P.y*P.y - P.z*P.z + m_alpha*m_gamma; 
-		DP.y = P.x*(P.y - m_beta*P.z) + m_delta;
-		DP.z = -P.z + P.x*(m_beta*P.y + P.z);
+		dp.x = -m_alpha*P.x + P.y*P.y - P.z*P.z + m_alpha*m_gamma; 
+		dp.y = P.x*(P.y - m_beta*P.z) + m_delta;
+		dp.z = -P.z + P.x*(m_beta*P.y + P.z);
 	}
 
 	virtual const char* GetClassName() const override  { return "LorentzMod2"; }
@@ -378,11 +377,11 @@ public:
         m_adaptative_dist = 0.24f;
     }
     
-    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
     {
-        DP.x = -P.y * P.y - P.z * P.z + m_alpha * (-P.x + m_gamma);
-        DP.y = P.x*(P.y - m_beta*P.z) - P.y + m_delta;
-        DP.z = -P.z + P.x*(m_beta*P.y + P.z);
+        dp.x = -P.y * P.y - P.z * P.z + m_alpha * (-P.x + m_gamma);
+        dp.y = P.x*(P.y - m_beta*P.z) - P.y + m_delta;
+        dp.z = -P.z + P.x*(m_beta*P.y + P.z);
     }
     
     virtual const char* GetClassName() const override  { return "Hadley"; }
@@ -411,11 +410,11 @@ public:
         m_adaptative_dist = 0.24f;
     }
     
-    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
     {
-        DP.x = -m_alpha*P.x + P.y*P.y - P.z*P.z + m_alpha*m_gamma;
-        DP.y = P.x*(P.y - m_beta*P.z) + m_delta;
-        DP.z = -P.z + P.x*(m_beta*P.y + P.z);
+        dp.x = -m_alpha*P.x + P.y*P.y - P.z*P.z + m_alpha*m_gamma;
+        dp.y = P.x*(P.y - m_beta*P.z) + m_delta;
+        dp.z = -P.z + P.x*(m_beta*P.y + P.z);
     }
     
     virtual const char* GetClassName() const override  { return "LorentzMod1"; }
@@ -443,11 +442,11 @@ public:
         m_adaptative_dist = 0.24f;
     }
     
-    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
     {
-        DP.x = P.x * (1.0f - P.y + P.x*(m_c - m_a*P.z));
-        DP.y = P.y * (-1.0f + P.x);
-        DP.z = P.z * (-m_b + m_a*P.x*P.x);
+        dp.x = P.x * (1.0f - P.y + P.x*(m_c - m_a*P.z));
+        dp.y = P.y * (-1.0f + P.x);
+        dp.z = P.z * (-m_b + m_a*P.x*P.x);
     }
     
     virtual const char* GetClassName() const override  { return "LotkaVolterra"; }
@@ -470,11 +469,11 @@ public:
         m_adaptative_dist = 0.24f;
     }
     
-    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
     {
-        DP.x = -m_a*P.x - 4.f*P.y - 4.f*P.z - P.y*P.y;
-        DP.y = -m_a*P.y - 4.f*P.z - 4.f*P.x - P.z*P.z;
-        DP.z = -m_a*P.z - 4.f*P.x - 4.f*P.y - P.x*P.x;
+        dp.x = -m_a*P.x - 4.f*P.y - 4.f*P.z - P.y*P.y;
+        dp.y = -m_a*P.y - 4.f*P.z - 4.f*P.x - P.z*P.z;
+        dp.z = -m_a*P.z - 4.f*P.x - 4.f*P.y - P.x*P.x;
     }
     
     virtual const char* GetClassName() const override  { return "Halvorsen"; }
@@ -496,13 +495,13 @@ public:
         m_adaptative_dist = 0.24f;
     }
     
-    virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count) const override
+    virtual void LoopAdaptative(Array<vec3>& out_pos, int32 iter_count, float step_factor, bool reverse) const override
     {
         vec3 P( m_init_point.x, m_init_point.y, 0.f );
         float r = length( P.xy );
         float alpha = bigball::atan2(P.y, P.x);
-        //float AdDt = bigball::abs(m_adaptative_dist / m_dt);
-        float dalpha = m_adaptative_dist / r;
+        //float ad_dt = bigball::abs(m_adaptative_dist / m_dt);
+        float dalpha = (reverse ? -1.f : 1.f) * step_factor * m_adaptative_dist / r;
         float dz = m_init_point.z;
         
         for (int32 i = 0; i < iter_count; i++)
@@ -511,17 +510,17 @@ public:
             P.xy = vec2( bigball::cos(alpha), bigball::sin(alpha) ) * r;
             P.z += dz;
             
-            //P += DP * (DRatio * m_dt);
+            //P += dp * (DRatio * m_dt);
             out_pos.push_back( P );
         }
     }
     
-    virtual void GetDerivatives(const vec3& P, vec3& DP) const override
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
     {
         vec2 v = normalize( P.xy );
-        DP.x = -v.y;
-        DP.y = v.x;
-        DP.z = m_init_point.z;
+        dp.x = -v.y;
+        dp.y = v.x;
+        dp.z = m_init_point.z;
     }
     
     virtual const char* GetClassName() const override  { return "SpiralTest"; }
@@ -604,8 +603,10 @@ struct AttractorShapeParams
 	float crease_depth;
 	float crease_width;
 	float crease_bevel;
+    /** maximum distance where a merge can happen with another segment */
 	float merge_dist;
     float max_drift;
+    /** number of points involved in a merge */
     int32 merge_span;
     int32 target_bary_offset;
     int32 max_iter_count;
@@ -727,12 +728,26 @@ struct AttractorOrientedCurve
 	{
 		snap_ranges = ivec4(0, 0, points.size(), points.size());
 	}
+    void Resize(int count)
+    {
+        points.resize(count);
+        frames.resize(count);
+        follow_angles.resize(count);
+        colors.resize(count);
+    }
 
 	Array<vec3>		points;
 	Array<quat>		frames;
 	Array<float>    follow_angles;
     Array<float>    colors;
 	ivec4			snap_ranges;
+};
+
+struct AttractorCurveSnap
+{
+    float sq_dist = 1e8f;
+    int32 seg = INDEX_NONE;
+    AttractorOrientedCurve const* curve = nullptr;
 };
 
 struct SABarycenterRef
@@ -793,7 +808,9 @@ struct SAGrid
 namespace SAUtils
 {
 
+    void        GenerateSnappedCurve(AttractorOrientedCurve& curve /*in-out*/, const AttractorCurveSnap& snap_start, const AttractorCurveSnap& snap_end, AttractorShapeParams const& shape_params, const bool blend_positions);
 	void		ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, Array<vec3>& line_points /*out*/);
+    void		IterateStrangeAttractorPoint(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, int32 iter_count, vec3& out_pos);
     void        GenerateSolidMesh(Array<AttractorOrientedCurve> const& curves, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<float>* tri_colors /*out*/, Array<int32>& tri_indices /*out*/, Array<int32>* indice_offsets, float rescale_factor);
     void        GenerateSolidMesh(AttractorOrientedCurve const& curve, const AttractorShapeParams& params, Array<vec3>& tri_vertices /*out*/, Array<vec3>* tri_normals /*out*/, Array<int32>& tri_indices /*out*/, float rescale_factor);
 
@@ -806,6 +823,7 @@ namespace SAUtils
     void		MergeLinePoints3(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
     void		MergeLinePoints4(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
     void		MergeLinePoints5(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
+    void		MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params);
     
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );
@@ -827,6 +845,8 @@ namespace SAUtils
 	bool FindSnapRangeEx(const Array<vec3>& line_points, int b_idx0, int b_idx1, float merge_dist, AttractorSnapRangeEx& snap_range);
 	bool ComputeReverseSnapRangeExInfo(const Array<vec3>& line_points, float merge_dist, AttractorSnapRangeEx& snap_range);
 	int	FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, int cur_seg_0, int inc, float sq_merge_dist, float& best_t);
+    int	FindNextBestSnapSeg(const Array<vec3>& line_points, vec3 pos, int cur_seg_0, int inc, float sq_merge_dist, float& best_t);
+    void FindNearestCurveSegment(AttractorOrientedCurve const& curve, ivec2 seg_range, vec3 p_0, vec3 p_1, float sq_merge_dist, AttractorCurveSnap& min_0, AttractorCurveSnap& min_1);
 };
 
 #endif	// SAESTRANGEATTRACTORS_H

@@ -166,8 +166,14 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
 
     if (need_update_mesh_buffer)
     {
+        // Merge the end of the curves
+        if (m_shape_params.merge_dist > 0.0f)
+        {
+            SAUtils::MergeCurves(m_curves, m_shape_params);
+        }
+        
         // Adapt size
-        if (m_line_params.target_dim > 0.0)
+        if (m_line_params.target_dim > 0.0f)
         {
             vec3 min_pos(FLT_MAX, FLT_MAX, FLT_MAX), max_pos(-FLT_MAX, -FLT_MAX, -FLT_MAX);
             for (int h_idx = 0; h_idx < num_handle; h_idx++)
@@ -188,15 +194,6 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
             float rescale = m_line_params.target_dim / dim_max;
             m_rescale_factor = rescale;
         }
-        
-        /*for (int h_idx = 0; h_idx < num_handle; h_idx++)
-        {
-            AttractorOrientedCurve& curve = m_curves[h_idx];
-            for (int32 i = 0; i < curve.points.size(); ++i)
-            {
-                curve.points[i] *= m_rescale_factor;
-            }
-        }*/
     }
     
     // preview geometry
@@ -224,6 +221,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
         m_tri_normals.clear();
         m_tri_indices.clear();
         m_indice_offsets.clear();
+        m_show_curve_flags.resize(m_curves.size(), 1);
         
         m_shape_params.weld_vertex = false;
         
@@ -276,95 +274,6 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
     
     cohandle->SaveHandleArray();
 }
-
-/*void CoAttractor::RebuildAttractorMesh(bool force_rebuild, bool keep_handle)
- {
-	CoHandle* cohandle = static_cast<CoHandle*>(GetEntityComponent("CoHandle"));
-	if (!m_attractor || !cohandle)
-        return;
-	
-    bool line_changed = false;
-	if (force_rebuild || !(m_line_params == m_cached_line_params))
-	{
-		m_line_framed.Clear();
-
-		SAUtils::ComputeStrangeAttractorPoints(*m_attractor, m_line_params, m_line_framed.points, m_rescale_factor);
-		SAUtils::GenerateFrames(m_line_framed);
-        SAUtils::GenerateColors(m_line_framed, 0.f);
-		m_line_framed.SetDefaultRanges();
-		if (!keep_handle)
-			cohandle->m_handles.clear();
-        line_changed = true;
-	}
-
-	// enforce cohandle ends
-	while (cohandle->m_handles.size() < 2)
-    {
-		cohandle->m_handles.push_back(AttractorHandle());
-        if( cohandle->m_handles.size() == 1 )
-        {
-            //cohandle->m_handles[0].m_type = MeshHandle::eHT_Begin;
-            cohandle->m_handles[0].m_line_idx = 1;
-            //cohandle->m_handles[0].m_mesh_idx = 1;
-        }
-        else
-        {
-            //cohandle->m_handles.Last().m_type = MeshHandle::eHT_End;
-			cohandle->m_handles.Last().m_line_idx = m_line_framed.points.size() - 2;
-			//cohandle->m_handles.Last().m_mesh_idx = m_line_framed.points.size() - 2;
-        }
-    }
-
-	if (force_rebuild || line_changed || !(m_shape_params == m_cached_shape_params) || cohandle->HasHandleArrayChanged())
-	{
-		m_snapped_lines.clear();
-
-        m_tri_vertices.clear();
-        m_tri_normals.clear();
-		m_tri_colors.clear();
-        m_tri_indices.clear();
-
-        m_shape_params.weld_vertex = false;
-
-		if (m_shape_params.merge_dist > 0.f)
-			SAUtils::MergeLinePoints5(m_line_framed, cohandle->m_handles, m_shape_params, m_snapped_lines);
-		else
-			m_snapped_lines.push_back( m_line_framed );
-
-		SAUtils::GenerateSolidMesh(m_snapped_lines, m_shape_params, m_tri_vertices, &m_tri_normals, &m_tri_colors, m_tri_indices);
-	}
-    
-    //if (m_shape_params.freeze_bbox)
-    {
-        vec3 min_box(FLT_MAX, FLT_MAX, FLT_MAX);
-        vec3 max_box(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-        int32 num_vertices = m_tri_vertices.size();
-        for( int32 i = 0; i < num_vertices; i++ )
-        {
-            vec3 pos = m_tri_vertices[i];
-            min_box = min(min_box, pos);
-            max_box = max(max_box, pos);
-        }
-        m_min_box = min_box;
-        m_max_box = max_box;
-    }
-    
-    // Update transform
-    const float scale = 0.01f;
-    const float z_offset = -m_min_box.z;
-    
-    transform t;
-    t.Set(quat(1.f), vec3(0.f, 0.f, z_offset) * scale, scale);
-    CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
-    copos->SetTransform( t );
-
-	UpdateVertexBuffers();
-
-	// save current params
-	m_cached_line_params = m_line_params;
-	m_cached_shape_params = m_shape_params;
-	cohandle->SaveHandleArray();
-}*/
 
 void CoAttractor::UpdateVertexBuffers(bool update_preview, bool update_mesh)
 {
@@ -546,6 +455,22 @@ void CoAttractor::GetMeshRenderOffsetsWithoutPreview(ivec2& start_range, ivec2& 
     start_range.y = m_indice_offsets[m_preview_idx];
     if(m_preview_idx < num_curve - 1)
         end_range.x = m_indice_offsets[m_preview_idx + 1];
+}
+
+vec3 CoAttractor::GuessCurvePos(int32 h_idx, int32 at_seed_offset)
+{
+    vec3 out_pos(0.f);
+    CoHandle* cohandle = static_cast<CoHandle*>(GetEntityComponent("CoHandle"));
+    if (!m_attractor || !cohandle)
+        return out_pos;
+    
+    int32 num_handle = cohandle->m_handles.size();
+    if (h_idx >= 0 && h_idx < num_handle)
+    {
+        AttractorHandle& handle = cohandle->m_handles[h_idx];
+        SAUtils::IterateStrangeAttractorPoint(*m_attractor, handle.m_seed, m_line_params, at_seed_offset, out_pos);
+    }
+    return out_pos;
 }
 
 void CoAttractor::_Render( RenderContext& render_ctxt )

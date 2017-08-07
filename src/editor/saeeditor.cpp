@@ -320,14 +320,11 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             {
                 ImGui::Text("off");
                 ImGui::SameLine();
-                bool o_0 = ImGui::Button("<");
-                ImGui::SameLine();
-                bool o_1 = ImGui::Button(">");
-                if(o_0 || o_1)
+                static int offset = 0;
+                ImGui::SliderInt("<", &offset, -10, 10);
+                if(offset != 0)
                 {
-                    Array<vec3> const& points = attractor->GetCurvePreview()->points;
-                    int32 new_idx = clamp(handle.m_idx_on_curve + (o_0 ? -1 : +1), 0, points.size()-1 );
-                    handle.m_seed.seed = points[new_idx];
+                    handle.m_seed.seed = attractor->GuessCurvePos(current_selection.m_handle_idx, offset);
                 }
             }
             {
@@ -472,7 +469,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
-        //ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
+        ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
 		//ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
 		//ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 

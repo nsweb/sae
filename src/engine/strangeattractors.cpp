@@ -6,17 +6,21 @@
 #include "math/splines.h"
 #include "core/sort.h"
 
+void SAUtils::IterateStrangeAttractorPoint(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, int32 iter_count, vec3& out_pos)
+{
+    out_pos = seed_params.seed;
+    attractor.m_init_point = seed_params.seed;
+    
+    Array<vec3> line_points;
+    attractor.LoopAdaptative(line_points, bigball::abs(iter_count), params.step_factor, iter_count < 0 ? true : false/*reverse*/);
+    if (line_points.size() > 0)
+        out_pos = line_points.Last();
+}
 
 void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, AttractorSeedParams const& seed_params, AttractorLineParams const& params, Array<vec3>& line_points)
 {
     vec3 seed = seed_params.seed;
     attractor.m_init_point = seed;
-    
-    float init_dt = attractor.m_dt;
-    float init_ad = attractor.m_adaptative_dist;
-    
-    attractor.m_dt = init_dt * params.step_factor;
-    attractor.m_adaptative_dist = init_ad * params.step_factor;
     
     /*if (params.warmup_iter > 0)
     {
@@ -28,18 +32,15 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, Attract
     
     if (seed_params.rev_iter > 0)
     {
-        attractor.m_dt = -attractor.m_dt;
-        attractor.LoopAdaptative(line_points, seed_params.rev_iter);
+        attractor.LoopAdaptative(line_points, seed_params.rev_iter, params.step_factor, true/*reverse*/);
         
         const int32 nb_point = line_points.size();
         for (int32 i = 0; i < nb_point / 2; i++)
             line_points.Swap(i, nb_point - 1 - i);
         line_points.push_back(seed);
-        
-        attractor.m_dt = -attractor.m_dt;
     }
     
-    attractor.LoopAdaptative(line_points, seed_params.iter);
+    attractor.LoopAdaptative(line_points, seed_params.iter, params.step_factor, false/*reverse*/);
     
     if (params.shearing_scale_x != 1.f || params.shearing_scale_y != 1.f || params.shearing_angle != 0.f)
     {
@@ -55,9 +56,6 @@ void SAUtils::ComputeStrangeAttractorPoints(StrangeAttractor& attractor, Attract
             line_points[i].y = rot_x * -sf + rot_y * cf;
         }
     }
-    
-    attractor.m_dt = init_dt;
-    attractor.m_adaptative_dist = init_ad;
 }
 
 static float SquaredDistancePointSegment_Unclamped(vec3 const& point, vec3 const& seg0, vec3 const& seg1, float& t_on_segment_unclamped)
@@ -87,6 +85,80 @@ static void PrintBary(SABarycenterRef const* bary, int32 bary_idx, float dist)
     }
     str_debug += "\n";
     BB_LOG(SAUtils, Log, str_debug.c_str());
+}
+
+void SAUtils::MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params)
+{
+    //Array<AttractorSnapRange> snap_ranges;
+    const int32 interp_spacing = shape_params.merge_span;
+    const float merge_dist = shape_params.merge_dist;
+    const float sq_merge_dist = merge_dist * merge_dist;
+    
+    int32 num_curve = curves.size();
+    for (int32 c_idx = 0; c_idx < num_curve; c_idx++)
+    {
+        AttractorOrientedCurve& curve = curves[c_idx];
+        if(curve.points.size() <= interp_spacing*2 + 2)
+            continue;
+        
+        vec3 p_0 = curve.points[0];
+        vec3 p_1 = curve.points.Last();
+        
+        AttractorCurveSnap snap_start, snap_end;
+        snap_start.sq_dist = sq_merge_dist;
+        snap_end.sq_dist = sq_merge_dist;
+        
+        for (int32 c_idx_2 = 0; c_idx_2 < num_curve; c_idx_2++)
+        {
+            AttractorOrientedCurve& curve_2 = curves[c_idx_2];
+            if(curve_2.points.size() <= interp_spacing*2 + 2)
+                continue;
+            
+            int32 nb_point = curve_2.points.size();
+            ivec2 seg_range = (c_idx == c_idx_2 ? ivec2(interp_spacing, nb_point - interp_spacing - 1) : ivec2(0, nb_point - 1) );
+        
+            FindNearestCurveSegment(curve_2, seg_range, p_0, p_1, sq_merge_dist, snap_start, snap_end );
+        }
+        
+        const bool blend_positions = true;
+        GenerateSnappedCurve(curve, snap_start, snap_end, shape_params, blend_positions);
+    }
+}
+
+void SAUtils::FindNearestCurveSegment(AttractorOrientedCurve const& curve, ivec2 seg_range, vec3 p_0, vec3 p_1, float sq_merge_dist, AttractorCurveSnap& min_0, AttractorCurveSnap& min_1)
+{
+    for (int32 p_idx = seg_range.x; p_idx < seg_range.y; p_idx++)
+    {
+        vec3 cp_0 = curve.points[p_idx];
+        vec3 cp_1 = curve.points[p_idx + 1];
+        
+        float sq_dist = sqlength(cp_0 - p_0);
+        if (sq_dist < sq_merge_dist)
+        {
+            float t;
+            sq_dist = intersect::SquaredDistancePointSegment(p_0, cp_0, cp_1, t);
+            if (sq_dist < min_0.sq_dist)
+            {
+                min_0.sq_dist = sq_dist;
+                min_0.seg = p_idx;
+                min_0.curve = &curve;
+                
+            }
+        }
+        
+        sq_dist = sqlength(cp_0 - p_1);
+        if (sq_dist < sq_merge_dist)
+        {
+            float t;
+            sq_dist = intersect::SquaredDistancePointSegment(p_1, cp_0, cp_1, t);
+            if (sq_dist < min_1.sq_dist)
+            {
+                min_1.sq_dist = sq_dist;
+                min_1.seg = p_idx;
+                min_1.curve = &curve;
+            }
+        }
+    }
 }
 
 void SAUtils::MergeLinePoints5(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines)
@@ -1012,6 +1084,115 @@ void SAUtils::MergeLinePoints(AttractorOrientedCurve const& line_framed, const A
     }
 }
 
+void SAUtils::GenerateSnappedCurve(AttractorOrientedCurve& curve /*in-out*/, const AttractorCurveSnap& snap_start, const AttractorCurveSnap& snap_end, AttractorShapeParams const& shape_params, const bool blend_positions)
+{
+    const int32 interp_spacing = shape_params.merge_span;
+    
+    AttractorOrientedCurve tmp_curve;
+    tmp_curve.Resize(interp_spacing);
+    
+    int cur_seg_0 = INDEX_NONE;
+    //const int lerp_spacing = SAUtils::points_in_bound * 7 / 2;
+    if (snap_start.seg >= 0)
+    {
+        // from snapped to unsnapped [S -> U] (i.e. from unplugged to plugged)
+        const int start_idx = 0;
+        cur_seg_0 = snap_start.seg;
+        for (int d_idx = 0; d_idx < interp_spacing; d_idx++)
+        {
+            int src_idx = start_idx + d_idx;
+            float best_t;
+            cur_seg_0 = FindNextBestSnapSeg(snap_start.curve->points, curve.points[src_idx], cur_seg_0, +1 /*inc*/, 1e8f, best_t);
+            if (cur_seg_0 == INDEX_NONE)
+                break;	// oups, should not happen
+            
+            vec3 src_pos = curve.points[src_idx];
+            vec3 p = src_pos;
+            if (blend_positions)
+            {
+                float ratio_blend = smoothstep(1.f - float(d_idx) / float(interp_spacing));
+                vec3 dst_pos = snap_start.curve->points[cur_seg_0] * (1.f - best_t) + snap_start.curve->points[cur_seg_0 + 1] * best_t;
+                vec3 delta_pos = dst_pos - src_pos;
+                p += delta_pos * ratio_blend;
+            }
+            
+            tmp_curve.points[d_idx] = p;//.push_back(p);
+            //cur_framed.frames.push_back(line_frames[src_idx]);
+            //cur_framed.follow_angles.push_back(follow_angles[src_idx]);
+        }
+#if 1
+        if (cur_seg_0 != INDEX_NONE)
+        {
+            int start_seg_0 = snap_start.seg;// snap_ranges[snap_idx].dst_segs.y;
+            quat dst_frame = snap_start.curve->frames[start_seg_0];// line_frames[start_seg_0];
+            float dst_follow_angle = snap_start.curve->follow_angles[start_seg_0];//follow_angles[start_seg_0];
+            quat dst_cmp_frame = curve.frames[start_idx];
+            float dst_cmp_follow_angle = curve.follow_angles[start_idx];
+            quat src_frame = curve.frames[start_idx + interp_spacing];
+            float src_follow_angle = curve.follow_angles[start_idx + interp_spacing];
+            vec3 src_follow, dst_follow;
+            FindNearestFollowVector(src_frame, src_follow_angle, dst_frame, dst_follow_angle, dst_cmp_frame, dst_cmp_follow_angle, shape_params.local_edge_count, src_follow, dst_follow);
+            
+            for (int d_idx = 0; d_idx < interp_spacing; d_idx++)
+                curve.points[d_idx] = tmp_curve.points[d_idx];
+            
+            // generate frames and follow_angles for the first section [SU]
+            // we needed to wait for the in-between copy because of the continuity flag below
+            GenerateFrames(curve, 0, interp_spacing - 1, false, true /*use continuity from last copy*/, &dst_follow, &src_follow);
+        }
+#endif
+    }
+    ////////////////////////////////////////////////////
+    if (snap_end.seg >= 0)
+    {
+        // from unsnapped to snapped [U -> S] (i.e. from plugged to unplugged)
+        //const int prev_size = cur_framed.points.size();
+        const int end_idx = curve.points.size()-1;
+        int cur_seg_0 = snap_end.seg;//snap_ranges[snap_idx + 1].dst_segs.x;
+        for (int d_idx = 0; d_idx < interp_spacing; d_idx++)
+        {
+            int src_idx = end_idx - d_idx;
+            float best_t;
+            cur_seg_0 = FindNextBestSnapSeg(snap_end.curve->points, curve.points[src_idx], cur_seg_0, -1 /*inc*/, 1e8f, best_t);
+            if (cur_seg_0 == INDEX_NONE)
+                break;	// oups, should not happen
+            
+            vec3 src_pos = curve.points[src_idx];
+            vec3 p = src_pos;
+            if (blend_positions)
+            {
+                float ratio_blend = smoothstep(1.f - float(d_idx) / float(interp_spacing));
+                vec3 dst_pos = snap_end.curve->points[cur_seg_0] * (1.f - best_t) + snap_end.curve->points[cur_seg_0 + 1] * best_t;
+                vec3 delta_pos = dst_pos - src_pos;
+                p += delta_pos * ratio_blend;
+            }
+            tmp_curve.points[interp_spacing-1 - d_idx] = p;//
+            //cur_framed.points.insert(p, prev_size);
+            //cur_framed.frames.insert(line_frames[src_idx], prev_size);
+            //cur_framed.follow_angles.insert(follow_angles[src_idx], prev_size);
+        }
+#if 1
+        if (cur_seg_0 != INDEX_NONE)
+        {
+            int end_seg_0 = snap_end.seg;// snap_ranges[snap_idx + 1].dst_segs.x;
+            quat src_frame = curve.frames[end_idx - interp_spacing];
+            float src_follow_angle = curve.follow_angles[end_idx - interp_spacing];
+            quat dst_cmp_frame = curve.frames[end_idx];
+            float dst_cmp_follow_angle = curve.follow_angles[end_idx];
+            quat dst_frame = snap_end.curve->frames[end_seg_0];
+            float dst_follow_angle = snap_end.curve->follow_angles[end_seg_0];
+            vec3 src_follow, dst_follow;
+            FindNearestFollowVector(src_frame, src_follow_angle, dst_frame, dst_follow_angle, dst_cmp_frame, dst_cmp_follow_angle, shape_params.local_edge_count, src_follow, dst_follow);
+            
+            for (int d_idx = 0; d_idx < interp_spacing; d_idx++)
+                curve.points[end_idx - (interp_spacing-1) + d_idx] = tmp_curve.points[d_idx];
+            
+            GenerateFrames(curve, end_idx - interp_spacing, end_idx, true /*use continuity from last copy*/, false, &src_follow, &dst_follow);
+        }
+#endif
+    }
+}
+
 // takes a continuous line and a bunch of snap ranges, output an array of framed lines
 // note that: 
 //	- it does not generate frames where lines are snapped
@@ -1531,11 +1712,16 @@ bool SAUtils::FindSnapRange(const Array<vec3>& line_points, int b_idx0, int b_id
 
 int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, int c_1_next, int cur_seg_0, int inc, float sq_merge_dist, float& best_t)
 {
+    return FindNextBestSnapSeg(line_points, line_points[c_1_next], cur_seg_0, inc, sq_merge_dist, best_t);
+}
+
+int SAUtils::FindNextBestSnapSeg(const Array<vec3>& line_points, vec3 pos, int cur_seg_0, int inc, float sq_merge_dist, float& best_t)
+{
     int best_seg = INDEX_NONE;
     const int max_iter = 6;
     for (int iter = 0; iter < max_iter; iter++)
     {
-        float t, sq_dist = intersect::SquaredDistancePointSegment(line_points[c_1_next], line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
+        float t, sq_dist = intersect::SquaredDistancePointSegment(pos, line_points[cur_seg_0], line_points[cur_seg_0 + 1], t);
         if (sq_dist < sq_merge_dist)
         {
             // move on to next seg
