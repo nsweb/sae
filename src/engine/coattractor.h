@@ -70,7 +70,7 @@ public:
     Array<int32>            m_tri_indices_preview;
     
     Array<int32>            m_indice_offsets;
-    Array<int32>            m_show_curve_flags;
+    Array<float>            m_show_curve_alphas;
     
     // dimensions of the attractor
     vec3                    m_min_box;

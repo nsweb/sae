@@ -160,32 +160,39 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 		{
 			CoAttractor* attractor = m_attractors[att_idx];
 			CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-			//CoHandle* cohandle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
-
-			float alpha = 1.f;
-//			if (m_show_handles && m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE)
-//			{
-//				alpha = 0.5f;
-//			}
 
 			mat4 world_mat(copos->GetTransform().ToMat4());
 			m_mesh_shader->SetUniform(uni_world, world_mat);
-			m_mesh_shader->SetUniform(uni_color, vec3(0.f/*sel_idx*/, (float)0.f/*attractor->m_view_handle_range*/, alpha));
+			
 			glBindVertexArray(attractor->m_varrays[CoAttractor::eVAMesh]);
             
-            ivec2 range_0, range_1;
-            attractor->GetMeshRenderOffsetsWithoutPreview(range_0, range_1);
-            if( range_0.y > range_0.x )
-                glDrawElements(GL_TRIANGLES, (GLsizei)(range_0.y - range_0.x), GL_UNSIGNED_INT, (void*)(range_0.x * sizeof(int32)));
-            if( range_1.y > range_1.x )
-                glDrawElements(GL_TRIANGLES, (GLsizei)(range_1.y - range_1.x), GL_UNSIGNED_INT, (void*)(range_1.x * sizeof(int32)));
             
+            int32 num_curve = attractor->m_curves.size();
+            int32 num_curve_alpha = attractor->m_show_curve_alphas.size();
+            for (int c_idx = 0; c_idx < num_curve; c_idx++)
+            {
+                if (c_idx == attractor->m_preview_idx)
+                    continue;
+                
+                float alpha = c_idx < num_curve_alpha ? attractor->m_show_curve_alphas[c_idx] : 1.f;
+                if (alpha == 0.f)
+                    continue;
+                
+                m_mesh_shader->SetUniform(uni_color, vec3(0.f/*sel_idx*/, (float)0.f/*attractor->m_view_handle_range*/, alpha));
+                
+                int32 start_idx = attractor->m_indice_offsets[c_idx];
+                int32 end_idx = c_idx < num_curve - 1 ? attractor->m_indice_offsets[c_idx + 1] : attractor->m_tri_indices.size();
+                glDrawElements(GL_TRIANGLES, (GLsizei)(end_idx - start_idx), GL_UNSIGNED_INT, (void*)(start_idx * sizeof(int32)));
+                
+            }
+
             //static int offset = 3000;
             //glDrawElements(GL_TRIANGLES, (GLsizei)(index_count - offset), GL_UNSIGNED_INT, 0/*(void*)(offset * sizeof(uint32))*/);
 			glBindVertexArray(0);
             
             if(attractor->GetCurvePreview())
             {
+                float alpha = attractor->m_preview_idx < num_curve_alpha ? max(0.1f, attractor->m_show_curve_alphas[attractor->m_preview_idx]) : 1.f;
                 m_mesh_shader->SetUniform(uni_color, vec3(1.f/*sel_idx*/, (float)0.f/*attractor->m_view_handle_range*/, alpha));
                 glBindVertexArray(attractor->m_varrays[CoAttractor::eVAMeshPreview]);
                 

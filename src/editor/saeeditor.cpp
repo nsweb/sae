@@ -19,7 +19,9 @@
 SAEEditor* SAEEditor::ms_editor = nullptr;
 
 SAEEditor::SAEEditor() :
-    m_current_attractor_type(INDEX_NONE)
+    m_current_attractor_type(INDEX_NONE),
+    m_seed_offset(0),
+    m_seed_copy(0.f)
 {
     ms_editor = this;
 	//m_current_file_name.resize(512);
@@ -307,60 +309,33 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
                 handle.m_seed.seed.y = seed_range * (bigball::randfloat() * 2.f - 1.f);
                 handle.m_seed.seed.z = seed_range * (bigball::randfloat() * 2.f - 1.f);
             }
+            if (ImGui::Button("Copy seed"))
+            {
+                m_seed_copy = handle.m_seed.seed;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Paste seed"))
+            {
+                handle.m_seed.seed = m_seed_copy;
+            }
             if( ImGui::InputInt("Iteration steps", &handle.m_seed.iter, 1, 100) )
                 handle.m_seed.iter = max( handle.m_seed.iter, 3 );
             if( ImGui::InputInt("Reverse iter. steps", &handle.m_seed.rev_iter, 1, 100) )
                handle.m_seed.rev_iter = max( handle.m_seed.rev_iter, 0 );
             
+            ImGui::SliderInt("Slide seed", &m_seed_offset, -10, 10);
+            if(m_seed_offset != 0)
+            {
+                handle.m_seed.seed = attractor->GuessCurvePos(current_selection.m_handle_idx, m_seed_offset);
+            }
+            
             float& seed_move = AttractorManager::GetStaticInstance()->m_attractor_seed_move_range;
             ImGui::PushItemWidth(250.f);
-            ImGui::SliderFloat("Move", &seed_move, 0.f, 2.f, "%.5f", 2.f);
+            ImGui::SliderFloat("Move speed", &seed_move, 0.f, 2.f, "%.5f", 2.f);
             ImGui::PopItemWidth();
             
             {
-                ImGui::Text("off");
-                ImGui::SameLine();
-                static int offset = 0;
-                ImGui::SliderInt("<", &offset, -10, 10);
-                if(offset != 0)
-                {
-                    handle.m_seed.seed = attractor->GuessCurvePos(current_selection.m_handle_idx, offset);
-                }
-            }
-            {
-                ImGui::SameLine();
-                ImGui::Text("left");
-                ImGui::SameLine();
-                bool l_0 = ImGui::Button("l");
-                ImGui::SameLine();
-                bool l_1 = ImGui::Button("r");
-                if(l_0 || l_1)
-                {
-                    Array<quat> const& frames = attractor->GetCurvePreview()->frames;
-                    mat3 mat(frames[handle.m_idx_on_curve]);
-                    vec3 vz = mat.v2;   // RIGHT
-                    
-                    handle.m_seed.seed += vz * (l_0 ? -seed_move : seed_move);
-                }
-            }
-            {
-                ImGui::SameLine();
-                ImGui::Text("up");
-                ImGui::SameLine();
-                bool l_0 = ImGui::Button("u");
-                ImGui::SameLine();
-                bool l_1 = ImGui::Button("d");
-                if(l_0 || l_1)
-                {
-                    Array<quat> const& frames = attractor->GetCurvePreview()->frames;
-                    mat3 mat(frames[handle.m_idx_on_curve]);
-                    vec3 vy = mat.v1;   // UP
-
-                    handle.m_seed.seed += vy * (l_0 ? -seed_move : seed_move);
-                }
-            }
-            
-            {
+                
                 bool x_0 = ImGui::Button("+x");
                 ImGui::SameLine();
                 bool x_1 = ImGui::Button("-x");
@@ -381,9 +356,9 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
                     handle.m_seed.seed += offset;
                 }
             }
+            
+            ImGui::SliderFloat("Curve alpha", &attractor->m_show_curve_alphas[current_selection.m_handle_idx], 0.f, 1.f, "%.1f");
         }
-        
-        //ImGui::InputInt("View range", &attractor->m_view_handle_range, 1, 100000);
         
         ImGui::PushItemWidth(50);
         Array<String> str_handle_array;

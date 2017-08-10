@@ -221,7 +221,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
         m_tri_normals.clear();
         m_tri_indices.clear();
         m_indice_offsets.clear();
-        m_show_curve_flags.resize(m_curves.size(), 1);
+        m_show_curve_alphas.resize(m_curves.size(), 1.f);
         
         m_shape_params.weld_vertex = false;
         

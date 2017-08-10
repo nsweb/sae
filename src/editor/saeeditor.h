@@ -48,6 +48,9 @@ public:
 	int					m_current_file_selection;
 	eMenuCommandType	m_current_menu_cmd_type;
     
+    int                 m_seed_offset;
+    vec3                m_seed_copy;
+    
 private:
     static SAEEditor*    ms_editor;
 
