@@ -229,8 +229,8 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			{
                 vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(handle.m_seed.seed * attractor->m_rescale_factor);
                 quat world_line_handle_quat = copos->GetRotation() * curve.frames[handle.m_idx_on_curve];
-				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && m_editor_selected.m_line_handle;
-				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && m_editor_hovered.m_line_handle;
+				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx /*&& m_editor_selected.m_line_handle*/;
+				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx /*&& m_editor_hovered.m_line_handle*/;
 				u8vec4 line_col = is_line_selected ? u8vec4(255, 250, 130, 255) : is_line_hovered ? u8vec4(255, 127, 255, 255) : u8vec4(255, 0, 255, 255);
 				DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), line_col, 0.8f, 0.8f);
                 
@@ -280,7 +280,7 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
     // if *dragging*
     // if handle selected
     //		pick line on attractor
-    bool dragging = m_editor_selected.m_attractor != nullptr && mouse_state.m_left_down && m_prev_mouse_left_down;
+    //bool dragging = m_editor_selected.m_attractor != nullptr && mouse_state.m_left_down && m_prev_mouse_left_down;
     
     float screen_width = (float)g_pEngine->GetDisplayMode().w;
     float screen_height = (float)g_pEngine->GetDisplayMode().h;
@@ -302,82 +302,55 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
     const float max_ray_dist = 10.f;
     vec3 ray_end = cam_pos + ray_world/*cam_front*/ * max_ray_dist;
     
-	bool ray_hit = false;
+    CoAttractor* picked_attractor = nullptr;
+    
+    CoAttractor::PickResult pr_attr;
+    pr_attr.m_curve_idx = INDEX_NONE;
+    pr_attr.m_line_idx = INDEX_NONE;
+    pr_attr.m_ray_dist = 1e8f;
+    
+    CoHandle::PickResult pr_handle;
+    pr_handle.m_handle_idx = INDEX_NONE;
+    pr_handle.m_ray_dist = 1e8f;
+    
     for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
     {
-        CoAttractor* attractor = m_attractors[0];
-        CoHandle* handle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
-    
-		if (dragging)
-		{
-			if (attractor == m_editor_selected.m_attractor)
-			{
-				//AttractorHandle& handle_selected = handle->GetHandle(m_editor_selected.m_handle_idx);
-                
-                CoHandle::PickResult current_result;
-                if (handle->RayCast(cam_pos, ray_end, current_result))
-                {
-                    if (current_result.m_handle_idx == m_editor_selected.m_handle_idx)
-                    {
-                        // snap mesh to line
-                        //if (!m_editor_selected.m_line_handle && current_result.m_is_line_pick)
-                        //    handle_selected.m_mesh_idx = handle_selected.m_line_idx;
-                    }
-                }
-                else
-                {
-                    const float ray_width = attractor->m_shape_params.fatness_scale;
-                    CoAttractor::PickResult pick_result;
-                    if (attractor->RayCast(cam_pos, ray_end, ray_width, pick_result))
-                    {
-                        //CoPosition* copos = static_cast<CoPosition*>(attractor->GetEntityComponent("CoPosition"));
-                        //const float cube_size = copos->GetTransform().GetScale() * attractor->m_shape_params.fatness_scale;
-                        //DrawUtils::GetStaticInstance()->PushAABB(pick_result.m_hit_pos, cube_size, u8vec4(255, 0, 255, 255));
-
-                        if (m_editor_selected.m_line_handle)
-                        {
-                            //handle_selected.m_line_idx = pick_result.m_line_idx;
-                        }
-                        /*else
-                        {
-                            handle_selected.m_mesh_idx = pick_result.m_line_idx;
-                        }*/
-                    }
-				}
-			}
-		}
-		else
-		{
-			CoHandle::PickResult pick_result;
-			if (handle->RayCast(cam_pos, ray_end, pick_result))
-			{
-				if (mouse_state.m_left_down)
-				{
-					m_editor_selected.m_attractor = attractor;
-					m_editor_selected.m_handle_idx = pick_result.m_handle_idx;
-					m_editor_selected.m_line_handle = pick_result.m_is_line_pick;
-				}
-				else
-				{
-					m_editor_hovered.m_attractor = attractor;
-					m_editor_hovered.m_handle_idx = pick_result.m_handle_idx;
-					m_editor_hovered.m_line_handle = pick_result.m_is_line_pick;
-				}
-				ray_hit = true;
-				break;
-			}
-		}
-    }
-
-	if (!ray_hit)
-	{
-		m_editor_hovered.m_attractor = nullptr;
-		m_editor_hovered.m_handle_idx = INDEX_NONE;
+        CoAttractor* attractor = m_attractors[att_idx];
+        const float ray_width = attractor->m_shape_params.fatness_scale;
+        if (attractor->RayCast(cam_pos, ray_end, ray_width, pr_attr))
+            picked_attractor = attractor;
         
-        if (mouse_state.m_left_down && !dragging)
+        CoHandle* handle = static_cast<CoHandle*>(attractor->GetEntityComponent("CoHandle"));
+        if (handle->RayCast(cam_pos, ray_end, pr_handle))
+            picked_attractor = attractor;
+    }
+    
+    if (picked_attractor)
+    {
+        AttractorSelection& sel = (mouse_state.m_left_down ? m_editor_selected : m_editor_hovered);
+        if (pr_attr.m_ray_dist < pr_handle.m_ray_dist)
         {
-            m_editor_selected.m_attractor = nullptr;
-            m_editor_selected.m_handle_idx = INDEX_NONE;
+            sel.m_attractor = picked_attractor;
+            sel.m_handle_idx = INDEX_NONE;
+            sel.m_curve_idx = pr_attr.m_curve_idx;
+            sel.m_line_idx = pr_attr.m_line_idx;
+        }
+        else
+        {
+            sel.m_attractor = picked_attractor;
+            sel.m_handle_idx = pr_handle.m_handle_idx;
+            sel.m_curve_idx = INDEX_NONE;
+            sel.m_line_idx = INDEX_NONE;
+
+        }
+    }
+    else
+	{
+		m_editor_hovered = AttractorSelection();
+    
+        if (mouse_state.m_left_down /*&& !dragging*/)
+        {
+            m_editor_selected = AttractorSelection();
         }
 	}
     

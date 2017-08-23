@@ -132,8 +132,10 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
     transform const& attr_transform = pos->GetTransform();
     const float cube_size = 2.f * attr_transform.GetScale() * attractor->m_shape_params.fatness_scale;
     
-	pick_result.m_dist = 1e8f;
-	pick_result.m_handle_idx = INDEX_NONE;
+	//pick_result.m_dist = 1e8f;
+	//pick_result.m_handle_idx = INDEX_NONE;
+    
+    bool is_picked = false;
     
 	int32 num_handle = m_handles.size();
 	for (int32 h_idx = 0; h_idx < num_handle; h_idx++)
@@ -150,12 +152,13 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 			vec3 ray_end_box = h_line_transform.TransformPositionInverse(ray_end);
 			vec3 ray_dir_box = normalize(ray_end_box - ray_start_box);
 
-			float dist = intersect::RayBoxIntersection(ray_start_box, ray_dir_box, vec3(1.f, 0.5f, 0.5f));
-			if (dist >= 0.f && dist < pick_result.m_dist)
+			float t = intersect::RayBoxIntersection(ray_start_box, ray_dir_box, vec3(1.f, 0.5f, 0.5f));
+			if (t >= 0.f && t < pick_result.m_ray_dist)
 			{
-				pick_result.m_dist = dist;
+				pick_result.m_ray_dist = t;
 				pick_result.m_handle_idx = h_idx;
-				pick_result.m_is_line_pick = true;
+                is_picked = true;
+				//pick_result.m_is_line_pick = true;
 			}
 		}
         
@@ -176,7 +179,7 @@ bool CoHandle::RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& p
 		}*/
 	}
 
-	return pick_result.m_handle_idx != INDEX_NONE;
+	return is_picked;
 }
 
 void CoHandle::Serialize(Archive& file)

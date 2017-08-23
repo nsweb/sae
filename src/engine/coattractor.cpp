@@ -395,16 +395,21 @@ bool CoAttractor::OnControllerInput( Camera* pcamera, ControllerInput const& inp
 bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const float ray_width, PickResult& pick_result)
 {
     CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
-    transform t = copos->GetTransform();
+    transform tf = copos->GetTransform();
     
-	vec3 seg0 = t.TransformPositionInverse(ray_start);
-	vec3 seg1 = t.TransformPositionInverse(ray_end);
+	vec3 seg0 = tf.TransformPositionInverse(ray_start);
+	vec3 seg1 = tf.TransformPositionInverse(ray_end);
     
 	// brute force raycast atm
 	const float sq_width = ray_width * ray_width;
     
-    pick_result.m_curve_idx = INDEX_NONE;
-	pick_result.m_line_idx = INDEX_NONE;
+    //pick_result.m_curve_idx = INDEX_NONE;
+	//pick_result.m_line_idx = INDEX_NONE;
+    //pick_result.m_dist = 1e8f;
+    //pick_result.m_handle_idx = INDEX_NONE;
+    
+    bool is_picked = false;
+    
 	for (int32 c_idx = 0; c_idx < m_curves.size(); c_idx++)
 	{
         AttractorOrientedCurve& curve = m_curves[c_idx];
@@ -415,17 +420,20 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
             // square dist to segment
             float t;
             float sq_dist = intersect::SquaredDistancePointSegment(point, seg0, seg1, t);
-            if (sq_dist < sq_width)
+            t *= tf.GetScale();
+            if (sq_dist < sq_width && t > 0.f && t < pick_result.m_ray_dist)
             {
                 pick_result.m_curve_idx = c_idx;
                 pick_result.m_line_idx = i;
+                pick_result.m_ray_dist = t;
+                is_picked = true;
             }
         }
 	}
     
-	if (pick_result.m_line_idx != INDEX_NONE)
+	if (is_picked)
     {
-		pick_result.m_hit_pos = t.TransformPosition(m_curves[pick_result.m_curve_idx].points[pick_result.m_line_idx]);
+		//pick_result.m_hit_pos = t.TransformPosition(m_curves[pick_result.m_curve_idx].points[pick_result.m_line_idx]);
         return true;
     }
     
