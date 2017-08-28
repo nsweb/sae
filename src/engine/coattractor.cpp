@@ -397,8 +397,8 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
     CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
     transform tf = copos->GetTransform();
     
-	vec3 seg0 = tf.TransformPositionInverse(ray_start);
-	vec3 seg1 = tf.TransformPositionInverse(ray_end);
+	vec3 seg0 = tf.TransformPositionInverse(ray_start) / m_rescale_factor;
+	vec3 seg1 = tf.TransformPositionInverse(ray_end) / m_rescale_factor;
     
 	// brute force raycast atm
 	const float sq_width = ray_width * ray_width;
@@ -423,8 +423,8 @@ bool CoAttractor::RayCast(vec3 const& ray_start, vec3 const& ray_end, const floa
             t *= tf.GetScale();
             if (sq_dist < sq_width && t > 0.f && t < pick_result.m_ray_dist)
             {
-                pick_result.m_curve_idx = c_idx;
-                pick_result.m_line_idx = i;
+                pick_result.m_handle_idx = c_idx;
+                pick_result.m_point_idx = i;
                 pick_result.m_ray_dist = t;
                 is_picked = true;
             }
@@ -447,6 +447,15 @@ const AttractorOrientedCurve* CoAttractor::GetCurvePreview() const
         return nullptr;
     
     return &m_curves[m_preview_idx];
+}
+
+vec3 CoAttractor::GetCurveWorldPos(int32 curve_ix, int32 point_idx)
+{
+    CoPosition const* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
+    AttractorOrientedCurve const& curve = m_curves[curve_ix];
+    
+    vec3 world_curve_pos = copos->GetTransform().TransformPosition(curve.points[point_idx] * m_rescale_factor);
+    return world_curve_pos;
 }
 
 void CoAttractor::GetMeshRenderOffsetsWithoutPreview(ivec2& start_range, ivec2& end_range) const

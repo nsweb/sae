@@ -210,6 +210,9 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 
 void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 {
+    const u8vec4 selection_col(255, 250, 130, 255);
+    const u8vec4 hover_col(255, 127, 255, 255);
+    
 	for (int att_idx = 0; att_idx < m_attractors.size(); att_idx++)
 	{
 		CoAttractor* attractor = m_attractors[att_idx];
@@ -229,9 +232,9 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 			{
                 vec3 world_line_handle_pos = copos->GetTransform().TransformPosition(handle.m_seed.seed * attractor->m_rescale_factor);
                 quat world_line_handle_quat = copos->GetRotation() * curve.frames[handle.m_idx_on_curve];
-				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx /*&& m_editor_selected.m_line_handle*/;
-				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx /*&& m_editor_hovered.m_line_handle*/;
-				u8vec4 line_col = is_line_selected ? u8vec4(255, 250, 130, 255) : is_line_hovered ? u8vec4(255, 127, 255, 255) : u8vec4(255, 0, 255, 255);
+				bool is_line_selected = m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx == h_idx && m_editor_selected.m_point_idx == INDEX_NONE;
+				bool is_line_hovered = m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx == h_idx && m_editor_hovered.m_point_idx == INDEX_NONE;
+				u8vec4 line_col = is_line_selected ? selection_col : is_line_hovered ? hover_col : u8vec4(255, 0, 255, 255);
 				DrawUtils::GetStaticInstance()->PushOBB(transform(world_line_handle_quat, world_line_handle_pos, cube_size), line_col, 0.8f, 0.8f);
                 
 				/*vec3 world_mesh_handle_pos = copos->GetTransform().TransformPosition(attractor->m_line_framed.points[handle.m_mesh_idx]);
@@ -241,6 +244,18 @@ void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
 				DrawUtils::GetStaticInstance()->PushSphere(world_mesh_handle_pos, cube_size * 0.85f, mesh_col);*/
 			}
 		}
+        
+        if (m_editor_selected.m_attractor == attractor && m_editor_selected.m_handle_idx != INDEX_NONE && m_editor_selected.m_point_idx != INDEX_NONE)
+        {
+            vec3 world_curve_pos = attractor->GetCurveWorldPos(m_editor_selected.m_handle_idx, m_editor_selected.m_point_idx);
+            DrawUtils::GetStaticInstance()->PushSphere(world_curve_pos, cube_size*1.2f, selection_col);
+        }
+        
+        if (m_editor_hovered.m_attractor == attractor && m_editor_hovered.m_handle_idx != INDEX_NONE && m_editor_hovered.m_point_idx != INDEX_NONE)
+        {
+            vec3 world_curve_pos = attractor->GetCurveWorldPos(m_editor_hovered.m_handle_idx, m_editor_hovered.m_point_idx);
+            DrawUtils::GetStaticInstance()->PushSphere(world_curve_pos, cube_size*1.2f, hover_col);
+        }
 	}
 }
 
@@ -305,8 +320,8 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
     CoAttractor* picked_attractor = nullptr;
     
     CoAttractor::PickResult pr_attr;
-    pr_attr.m_curve_idx = INDEX_NONE;
-    pr_attr.m_line_idx = INDEX_NONE;
+    pr_attr.m_handle_idx = INDEX_NONE;
+    pr_attr.m_point_idx = INDEX_NONE;
     pr_attr.m_ray_dist = 1e8f;
     
     CoHandle::PickResult pr_handle;
@@ -331,16 +346,14 @@ void AttractorManager::HandleScenePick(ControllerMouseState const& mouse_state)
         if (pr_attr.m_ray_dist < pr_handle.m_ray_dist)
         {
             sel.m_attractor = picked_attractor;
-            sel.m_handle_idx = INDEX_NONE;
-            sel.m_curve_idx = pr_attr.m_curve_idx;
-            sel.m_line_idx = pr_attr.m_line_idx;
+            sel.m_handle_idx = pr_attr.m_handle_idx;
+            sel.m_point_idx = pr_attr.m_point_idx;
         }
         else
         {
             sel.m_attractor = picked_attractor;
             sel.m_handle_idx = pr_handle.m_handle_idx;
-            sel.m_curve_idx = INDEX_NONE;
-            sel.m_line_idx = INDEX_NONE;
+            sel.m_point_idx = INDEX_NONE;
 
         }
     }

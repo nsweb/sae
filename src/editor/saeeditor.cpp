@@ -367,7 +367,8 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             str_handle_array.push_back(String::Printf("%d", h_idx));
         }
         ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Handles");
-        ImGui::ListBox("", &current_selection.m_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6);
+        if (ImGui::ListBox("", &current_selection.m_handle_idx, GetItemStringArray, &str_handle_array, num_handles, 6))
+            current_selection.m_point_idx = INDEX_NONE;
         ImGui::PopItemWidth();
         
         ImGui::SameLine();
@@ -404,24 +405,68 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         }
         ImGui::EndGroup();
         
-        /*if (current_selection.m_handle_idx >= 0 && current_selection.m_handle_idx < num_handles)
+        if (current_selection.m_handle_idx != INDEX_NONE && current_selection.m_point_idx != INDEX_NONE)
         {
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(255,0,0,100));
             ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::PushItemWidth(140);
-            AttractorHandle& handle = cohandle->GetHandle(current_selection.m_handle_idx);
-            ImGui::InputInt("line idx", &handle.m_line_idx);
-            //ImGui::InputInt("mesh idx", &handle.m_mesh_idx);
+            ImGui::BeginChildFrame(234, ImVec2(200,80), ImGuiWindowFlags_ShowBorders);
+            //ImGui::LabelText("Point idx", "%d", current_selection.m_point_idx);
+            if( ImGui::InputInt("Point idx", &current_selection.m_point_idx, 1, 100) )
+            {
+                AttractorOrientedCurve const& curve = attractor->m_curves[current_selection.m_handle_idx];
+                current_selection.m_point_idx = clamp(current_selection.m_point_idx, 1, curve.points.size() - 1);
+            }
             
-            //handle.m_line_idx = clamp(handle.m_line_idx, 1, attractor->m_line_framed.points.size() - 2);
-            //handle.m_mesh_idx = clamp(handle.m_mesh_idx, 1, attractor->m_line_framed.points.size() - 2);
+            static int cut_length = 0;
+            if( ImGui::InputInt("Cut length", &cut_length, 1, 100) )
+                cut_length = max( cut_length, 0 );
+            if (ImGui::Button("Cut line"))
+            {
+                AttractorOrientedCurve const& old_curve = attractor->m_curves[current_selection.m_handle_idx];
+                AttractorHandle& old_handle = cohandle->m_handles[current_selection.m_handle_idx];
+                const int32 num_point = old_curve.points.size();
+                const int32 old_iter = old_handle.m_seed.iter;
+                const int32 old_rev_iter = old_handle.m_seed.rev_iter;
+                const int32 pt_idx = current_selection.m_point_idx;
+                
+                if (pt_idx < old_rev_iter)
+                {
+                    old_handle.m_seed.seed = old_curve.points[pt_idx];
+                    old_handle.m_seed.iter = 0;
+                    old_handle.m_seed.rev_iter = pt_idx;
+                }
+                else
+                {
+                    old_handle.m_seed.iter = pt_idx - old_rev_iter;
+                }
+                
+                if (cut_length > 0)
+                {
+                    if (pt_idx + cut_length < num_point)
+                    {
+                        // cuts at point idx, removes cut_length points after that
+                        cohandle->InsertHandle( current_selection.m_handle_idx + 1 );
+                        attractor->InsertCurve( current_selection.m_handle_idx + 1 );
+                        
+                        AttractorOrientedCurve const& prev_curve = attractor->m_curves[current_selection.m_handle_idx];
+                        AttractorHandle& new_handle = cohandle->m_handles[current_selection.m_handle_idx + 1];
+                        new_handle.m_seed.seed = prev_curve.points[pt_idx + cut_length];
+                        new_handle.m_seed.iter = num_point - (pt_idx + cut_length);
+                        new_handle.m_seed.rev_iter = 0;
+                    }
+                }
+                // reset
+                current_selection.m_point_idx = INDEX_NONE;
+            }
             
-            //const char* srt_type_array[AttractorHandle::eHT_Count] = {"Move", "Cut"};
-            //ImGui::Combo("", (int32*)&handle.m_type, srt_type_array, AttractorHandle::eHT_Count);
-            
-            ImGui::PopItemWidth();
-            ImGui::EndGroup();
-        }*/
+            //static bool show_demo = false;
+            //if (ImGui::Button("Test Window"))
+            //    show_demo = true;
+            //ImGui::ShowTestWindow(&show_demo);
+
+            ImGui::EndChildFrame();
+            ImGui::PopStyleColor();
+        }
         
         //static float value = 0.5f;
         //if (ImGui::BeginPopupContextItem("item context menu"))
@@ -438,15 +483,10 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
         //ImGui::SameLine();
 
 		ImGui::PushItemWidth(125);
-		//ImGui::InputInt("Iteration steps", &attractor->m_line_params.iter, 1, 100);// , ImGuiInputTextFlags extra_flags = 0);
-		//ImGui::InputInt("Reverse iter. steps", &attractor->m_line_params.rev_iter, 1, 100);
-		//ImGui::InputInt("Warmup iter. steps", &attractor->m_line_params.warmup_iter, 1, 100);
 		ImGui::InputFloat("Step size", &attractor->m_line_params.step_factor);
 		ImGui::InputInt("Simplify step", &attractor->m_shape_params.simplify_level, 1, 10);
 		ImGui::InputFloat("Merge dist", &attractor->m_shape_params.merge_dist);
         ImGui::InputInt("Merge span", &attractor->m_shape_params.merge_span, 1, 10000);
-		//ImGui::Checkbox("Snap interp", &attractor->m_shape_params.snap_interp);
-		//ImGui::Checkbox("Remove line ends", &attractor->m_shape_params.remove_line_ends);
 
 		ImGui::Separator();
         
@@ -455,8 +495,6 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::InputFloat("Crease depth", &attractor->m_shape_params.crease_depth);
 		ImGui::InputFloat("Crease width", &attractor->m_shape_params.crease_width);
 		ImGui::InputFloat("crease bevel", &attractor->m_shape_params.crease_bevel);
-        //ImGui::InputFloat("max drift", &attractor->m_shape_params.max_drift);
-        //ImGui::InputInt("target bary offset", &attractor->m_shape_params.target_bary_offset, 1, 20);
 
 		ImGui::Separator();
 
@@ -471,11 +509,6 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
 		ImGui::PopItemWidth();
 
 		ImGui::Separator();
-		
-		/*if (ImGui::Button("Rebuild"))
-		{ 
-			attractor->RebuildAttractorMesh();
-		}*/
     }
 
 	if (ImGui::CollapsingHeader("Stats"))

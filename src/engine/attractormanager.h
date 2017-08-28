@@ -18,11 +18,10 @@ class AttractorFactory;
 
 struct AttractorSelection
 {
-    AttractorSelection() : m_attractor(nullptr), m_handle_idx(INDEX_NONE), m_curve_idx(INDEX_NONE), m_line_idx(INDEX_NONE) {}
+    AttractorSelection() : m_attractor(nullptr), m_handle_idx(INDEX_NONE), m_point_idx(INDEX_NONE) {}
     CoAttractor*    m_attractor;
     int32           m_handle_idx;
-    int32           m_curve_idx;
-    int32           m_line_idx;
+    int32           m_point_idx;
 };
 
 class AttractorManager : public ComponentManager

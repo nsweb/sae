@@ -47,15 +47,16 @@ public:
 
 	struct PickResult
 	{
-		//vec3	m_hit_pos;
-		int32	m_curve_idx;
-        int32   m_line_idx;
+		int32	m_handle_idx;
+        int32   m_point_idx;
         float	m_ray_dist;
 	};
 
 	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, const float ray_width, PickResult& pick_result);
     const AttractorOrientedCurve* GetCurvePreview() const;
     void                GetMeshRenderOffsetsWithoutPreview(ivec2& start_range, ivec2& end_range) const;
+    
+    vec3                GetCurveWorldPos(int32 curve_ix, int32 point_idx);
 
 public:
 	StrangeAttractor*       m_attractor;

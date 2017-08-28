@@ -45,8 +45,6 @@ public:
 	struct PickResult
 	{
 		int32	m_handle_idx;
-        //int32   m_line_idx;
-		//bool	m_is_line_pick;
 		float	m_ray_dist;
 	};
 	bool				RayCast(vec3 const& ray_start, vec3 const& ray_end, PickResult& pick_result);
