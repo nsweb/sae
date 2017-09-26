@@ -23,6 +23,7 @@ enum eAttractorType
     eAttractor_LorentzMod1,
     eAttractor_LotkaVolterra,
     eAttractor_Halvorsen,
+    eAttractor_TSUCS1,
     eAttractor_SpiralTest,
 	eAttractor_MAX
 };
@@ -257,18 +258,18 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-class TSUCS2Attractor : public StrangeAttractor
+class TSUCS1Attractor : public StrangeAttractor
 {
 public:
-	float m_alpha, m_delta, m_c, m_g, m_beta, m_epsilon;
+	float m_alpha, m_delta, m_g, m_beta, m_epsilon;
 
-	TSUCS2Attractor()
+	TSUCS1Attractor()
 	{
-		m_type = eAttractor_TSUCS2;
+		m_type = eAttractor_TSUCS1;
 		m_alpha = 40.0f;
-		m_c = 55.0f;
-		m_beta = 1.833f;
-		m_delta = 0.16f;
+		//m_c = 55.0f;
+		m_beta = 0.833f;
+		m_delta = 0.5f;
 		m_epsilon = 0.65f;
 		m_g = 20.0f;
 
@@ -282,10 +283,43 @@ public:
 	virtual void GetDerivatives(const vec3& P, vec3& dp) const override
 	{
 		dp.x = m_alpha * (P.y - P.x) + m_delta * P.x * P.z;
-		dp.y = m_c * P.x - P.x * P.z + m_g * P.y;
+		dp.y = /*m_c * P.x*/ - P.x * P.z + m_g * P.y;
 		dp.z = m_beta * P.z + P.x * P.y - m_epsilon * P.x * P.x;
 	}
-	virtual const char* GetClassName() const override  { return "TSUCS2"; }
+	virtual const char* GetClassName() const override  { return "TSUCS1"; }
+    virtual StrangeAttractor* NewClassObject() const override { return new TSUCS1Attractor; }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class TSUCS2Attractor : public StrangeAttractor
+{
+public:
+    float m_alpha, m_delta, m_c, m_g, m_beta, m_epsilon;
+    
+    TSUCS2Attractor()
+    {
+        m_type = eAttractor_TSUCS2;
+        m_alpha = 40.0f;
+        m_c = 55.0f;
+        m_beta = 1.833f;
+        m_delta = 0.16f;
+        m_epsilon = 0.65f;
+        m_g = 20.0f;
+        
+        m_init_point = vec3( 0.1f, 0.0f, 0.0f );
+        //m_max_iter = 1000;
+        //m_fatness_scale = 0.01f;
+        m_dt = 0.001f;
+        m_adaptative_dist = 0.24f;
+    }
+    
+    virtual void GetDerivatives(const vec3& P, vec3& dp) const override
+    {
+        dp.x = m_alpha * (P.y - P.x) + m_delta * P.x * P.z;
+        dp.y = m_c * P.x - P.x * P.z + m_g * P.y;
+        dp.z = m_beta * P.z + P.x * P.y - m_epsilon * P.x * P.x;
+    }
+    virtual const char* GetClassName() const override  { return "TSUCS2"; }
     virtual StrangeAttractor* NewClassObject() const override { return new TSUCS2Attractor; }
 };
 

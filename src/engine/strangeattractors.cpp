@@ -2442,6 +2442,7 @@ void AttractorFactory::Create()
     m_all_attractors[eAttractor_LorentzMod1] = new LorentzMod1Attractor;
     m_all_attractors[eAttractor_LotkaVolterra] = new LotkaVolterraAttractor;
     m_all_attractors[eAttractor_Halvorsen] = new HalvorsenAttractor;
+    m_all_attractors[eAttractor_TSUCS1] = new TSUCS1Attractor;
     m_all_attractors[eAttractor_SpiralTest] = new SpiralTestAttractor;
 }
 
