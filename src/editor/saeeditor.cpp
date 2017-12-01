@@ -95,6 +95,14 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 			{
 				menu_cmd_type = eMenuCommandType::ExportObj;
 			}
+			if (ImGui::MenuItem("Export Ply"))
+			{
+				menu_cmd_type = eMenuCommandType::ExportPly;
+			}
+			if (ImGui::MenuItem("Export Pbrt scene file"))
+			{
+				menu_cmd_type = eMenuCommandType::ExportPbrt;
+			}
 			ImGui::EndMenu();
 		}
 
@@ -111,7 +119,7 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
 	{
 		DrawFileDialog(m_current_menu_cmd_type);
 
-		const char* button_labels[(int)eMenuCommandType::Count] = { "", "Save attractor (.sae)", "Load attractor (.sae)", "Load attractor (.sae)", "Export obj" };
+		const char* button_labels[(int)eMenuCommandType::Count] = { "", "Save attractor (.sae)", "Load attractor (.sae)", "Load attractor (.sae)", "Export obj", "Export ply", "Export pbrt scene (.pbrt)" };
 		if (ImGui::Button(button_labels[(int)m_current_menu_cmd_type]))
 		{
 			// Execute command here
@@ -140,6 +148,21 @@ void SAEEditor::UIDrawEditorMenus(RenderContext& render_ctxt)
                     }
                     break;
                 }
+				case eMenuCommandType::ExportPly:
+				{
+					String filename = m_current_file_path + m_current_file_name;
+					File file;
+					if (file.Open(filename.c_str(), true))
+					{
+						AttractorManager::GetStaticInstance()->ExportAttractorAsPly(file);
+					}
+					break;
+				}
+				case eMenuCommandType::ExportPbrt:
+				{
+					AttractorManager::GetStaticInstance()->ExportAttractorAsPbrtScene(m_current_file_path, m_current_file_name);
+					break;
+				}
                 default: break;
 			}
 
@@ -526,6 +549,7 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     if (ImGui::CollapsingHeader("Display"))
     {
         ImGui::Checkbox("show lines", &AttractorManager::GetStaticInstance()->m_show_lines);
+		ImGui::Checkbox("show handles", &AttractorManager::GetStaticInstance()->m_show_handles);
     }
     
     ImGui::End();

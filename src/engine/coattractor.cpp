@@ -538,3 +538,16 @@ void CoAttractor::ExportAsObj(Archive& file)
     
     SAUtils::WriteObjFile(file, m_tri_vertices, m_tri_indices);
 }
+
+void CoAttractor::ExportAsPly(Archive& file)
+{
+	Array<vec3> tri_vertices_export;
+	Array<int32> tri_indices_export;
+
+	AttractorShapeParams shape_params_export = m_shape_params;
+	shape_params_export.weld_vertex = true;
+
+	SAUtils::GenerateSolidMesh(m_curves, shape_params_export, tri_vertices_export, nullptr, nullptr, tri_indices_export, nullptr, m_rescale_factor);
+
+	SAUtils::WritePlyFile(file, tri_vertices_export, tri_indices_export);
+}

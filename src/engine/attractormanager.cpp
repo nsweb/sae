@@ -410,3 +410,25 @@ void AttractorManager::ExportAttractorAsObj(Archive& file)
     CoAttractor* attractor = m_attractors[0];
     attractor->ExportAsObj(file);
 }
+
+void AttractorManager::ExportAttractorAsPly(Archive& file)
+{
+	if (!m_attractors.size())
+		return;
+
+	CoAttractor* attractor = m_attractors[0];
+	attractor->ExportAsPly(file);
+}
+
+void AttractorManager::ExportAttractorAsPbrtScene(String const& file_path, String const& file_name)
+{
+	if (!m_attractors.size())
+		return;
+	String filename = file_path + file_name;
+	File file;
+	if (!file.Open(filename.c_str(), true))
+		return;
+
+	CoAttractor* attractor = m_attractors[0];
+	attractor->ExportAsPly(file);
+}

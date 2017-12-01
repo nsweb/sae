@@ -21,6 +21,8 @@ enum class eMenuCommandType
 	LoadAttractor,
 	LoadAttractorOld,
 	ExportObj,
+	ExportPly,
+	ExportPbrt,
 	Count,
 };
 

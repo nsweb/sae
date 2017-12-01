@@ -33,6 +33,7 @@ public:
     virtual void        Serialize(Archive& file) override;
 	virtual void		PostLoad() override;
     void                ExportAsObj(Archive& file);
+	void                ExportAsPly(Archive& file);
     
 	void				_Render( RenderContext& render_ctxt );
     bool                OnControllerInput( Camera* pCamera, ControllerInput const& Input );
