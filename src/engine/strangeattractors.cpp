@@ -2173,51 +2173,67 @@ void SAUtils::WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, cons
     //fclose( fp );
 }
 
-#if 0
-void SAUtils::WriteObjFile(const char* filename, const Array<AttractorShape>& vAllShapes)
+void SAUtils::WritePlyFile(Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices)
 {
-    File fp;
-    if (!fp.Open(filename, true))
-        return;
-    //FILE* fp = NULL;
-    //fopen_s( &fp, filename, "wt" );
-    String tmp_str;
-    tmp_str = String::Printf("#\n# %s\n#\n\n", filename);
-    fp.SerializeString(tmp_str);
-    //fprintf( fp, "#\n# %s\n#\n\n", filename );
-    
-    // Write vertices
-    for (int32 ShapeIdx = 0; ShapeIdx < vAllShapes.size(); ShapeIdx++)
-    {
-        const AttractorShape& S = vAllShapes[ShapeIdx];
-        int32 i, nPart = S.tri_vertices.size();
-        for (i = 0; i < nPart; ++i)
-        {
-            tmp_str = String::Printf("v %f %f %f\n", S.tri_vertices[i].x, S.tri_vertices[i].y, S.tri_vertices[i].z);
-            fp.SerializeString(tmp_str);
-            //fprintf( fp, "v %f %f %f\n", S.vShape[i].x, S.vShape[i].y, S.vShape[i].z );
-        }
-    }
-    
-    // Write faces
-    int32 nVertexOffset = 0;
-    for (int32 ShapeIdx = 0; ShapeIdx < vAllShapes.size(); ShapeIdx++)
-    {
-        const AttractorShape& S = vAllShapes[ShapeIdx];
-        int32 i, nTri = S.tri_indices.size() / 3;
-        for (i = 0; i < nTri; ++i)
-        {
-            tmp_str = String::Printf("f %d %d %d\n", nVertexOffset + 1 + S.tri_indices[3 * i], nVertexOffset + 1 + S.tri_indices[3 * i + 1], nVertexOffset + 1 + S.tri_indices[3 * i + 2]);
-            fp.SerializeString(tmp_str);
-            //fprintf( fp, "f %d %d %d\n", nVertexOffset + 1 + S.tri_indices[3*i], nVertexOffset + 1 + S.tri_indices[3*i+1], nVertexOffset + 1 + S.tri_indices[3*i+2] );
-        }
-        
-        nVertexOffset += S.tri_vertices.size();
-    }
-    
-    //fclose( fp );
+	bool binary_data = true;
+
+	int32 i, num_points = tri_vertices.size(), num_tri = tri_indices.size() / 3;
+
+	file.WriteString("ply\n");
+	if(binary_data)
+		file.WriteString("format binary_little_endian 1.0\n"); 
+	else
+		file.WriteString("format ascii 1.0\n");
+	//comment this file is a cube
+
+	String tmp_str;
+	tmp_str = String::Printf("element vertex %d\n", num_points);
+	file.SerializeString(tmp_str);
+
+	file.WriteString("property float32 x\n");
+	file.WriteString("property float32 y\n");
+	file.WriteString("property float32 z\n");
+
+	tmp_str = String::Printf("element face %d\n", num_tri);
+	file.SerializeString(tmp_str);
+		
+	file.WriteString("property list int32 int32 vertex_index\n");
+	file.WriteString("end_header\n");
+
+	if (binary_data)
+	{
+		vec3 vertex;
+		for (i = 0; i < num_points; ++i)
+		{
+			vertex = tri_vertices[i];  file.SerializeRaw(vertex);
+		}
+
+		int32 num_edge = 3, tri_idx;
+		for (i = 0; i < num_tri; ++i)
+		{
+			file.SerializeRaw(num_edge);
+			tri_idx = tri_indices[3 * i];  file.SerializeRaw(tri_idx);
+			tri_idx = tri_indices[3 * i + 1];  file.SerializeRaw(tri_idx);
+			tri_idx = tri_indices[3 * i + 2];  file.SerializeRaw(tri_idx);
+			//fprintf( fp, "f %d %d %d\n", 1 + tri_indices[3*i], 1 + tri_indices[3*i+1], 1 + tri_indices[3*i+2] );
+		}
+	}
+	else
+	{
+		for (i = 0; i < num_points; ++i)
+		{
+			tmp_str = String::Printf("%f %f %f\n", tri_vertices[i].x, tri_vertices[i].y, tri_vertices[i].z);
+			file.SerializeString(tmp_str);
+		}
+
+		for (i = 0; i < num_tri; ++i)
+		{
+			tmp_str = String::Printf("3 %d %d %d\n", tri_indices[3 * i], tri_indices[3 * i + 1], tri_indices[3 * i + 2]);
+			file.SerializeString(tmp_str);
+			//fprintf( fp, "f %d %d %d\n", 1 + tri_indices[3*i], 1 + tri_indices[3*i+1], 1 + tri_indices[3*i+2] );
+		}
+	}
 }
-#endif // 0
 
 void SAUtils::GenerateLocalShape(Array<vec3>& local_shapes, const AttractorShapeParams& params)
 {

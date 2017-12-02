@@ -58,6 +58,8 @@ public:
     
     void                SerializeAttractor(Archive& file, bool old_format);
     void                ExportAttractorAsObj(Archive& file);
+	void				ExportAttractorAsPly(Archive& file);
+	void				ExportAttractorAsPbrtScene(String const& file_path, String const& file_name);
 
 public:
 

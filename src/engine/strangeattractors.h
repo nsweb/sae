@@ -837,6 +837,7 @@ namespace SAUtils
 
 	//void		WriteObjFile( const char* FileName, const Array<AttractorShape>& vAllShapes );
 	void		WriteObjFile( Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices );
+	void		WritePlyFile(Archive& file, const Array<vec3>& tri_vertices, const Array<int32>& tri_indices);
 
 	void		FindNearestFollowVector(quat const& src_frame, float src_follow_angle, quat const& dst_frame, float dst_follow_angle, quat const& dst_cmp_frame, float dst_cmp_follow_angle, int32 local_edge_count, vec3& src_follow, vec3& dst_follow);
 	int32		FindNearestPoint( const Array<vec3>& line_points, int32 PointIdx, int32 IgnoreStart, int32 IgnoreEnd );
