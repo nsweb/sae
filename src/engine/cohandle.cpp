@@ -189,8 +189,39 @@ void CoHandle::Serialize(Archive& file)
     if( file.IsReading() )
         m_cached_handles.resize(count);
     
-    file.Serialize(m_cached_handles.Data(), count * sizeof(AttractorHandle));
+    for (int32 h_idx = 0; h_idx < m_cached_handles.size(); h_idx++)
+    {
+        m_cached_handles[h_idx].Serialize(file);
+    }
     
     if( file.IsReading() )
         m_handles = m_cached_handles;
 }
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+void AttractorHandle::Serialize(Archive& file)
+{
+    m_seed.Serialize(file);
+    file.SerializeRaw(m_idx_on_curve);
+}
+    
+void AttractorSeedParams::Serialize(Archive& file)
+{
+    uint32 file_version = file.GetVersion();
+    
+    file.SerializeRaw(seed);
+    file.SerializeRaw(iter);
+    file.SerializeRaw(rev_iter);
+    
+    
+    if (file_version >= (uint32)eSaeVersion_SpanPerHandle)
+    {
+        file.SerializeRaw(merge_span);
+    }
+    else if (file.IsReading())
+    {
+        merge_span = -1;
+    }
+}
+

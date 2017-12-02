@@ -14,8 +14,41 @@ namespace bigball
     class BIGBALL_API Camera;
     struct ControllerInput;
 };
-struct AttractorHandle;
 
+struct AttractorSeedParams
+{
+    vec3 seed = vec3(1.f, 1.f, 1.f);
+    int32 iter = 2000;
+    int32 rev_iter = 0;
+    int32 merge_span = -1;
+    
+    bool operator == (AttractorSeedParams const& oth)
+    {
+        return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter && merge_span == oth.merge_span;
+    }
+    
+    void Serialize(Archive& file);;
+};
+
+struct AttractorHandle
+{
+public:
+    AttractorHandle() : m_idx_on_curve(0)	{}
+    ~AttractorHandle()	{}
+    
+    bool operator == (AttractorHandle const& oth)
+    {
+        return m_seed == oth.m_seed;
+    }
+    
+    void Serialize(Archive& file);
+    
+    AttractorSeedParams m_seed;
+    int32               m_idx_on_curve;
+    //int32             m_mesh_idx;
+};
+
+////////////////////////////////////////////////////
 class CoHandle : public Component 
 {
 	CLASS_EQUIP_H(CoHandle, Component)

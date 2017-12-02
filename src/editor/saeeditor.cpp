@@ -358,6 +358,9 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
             }
             
             ImGui::SliderFloat("Curve alpha", &attractor->m_show_curve_alphas[current_selection.m_handle_idx], 0.f, 1.f, "%.1f");
+            
+            if (ImGui::InputInt("Merge span", &handle.m_seed.merge_span, 1, 100))
+                handle.m_seed.merge_span = max( handle.m_seed.merge_span, -1 );
         }
         
         ImGui::PushItemWidth(50);
@@ -526,6 +529,8 @@ void SAEEditor::DrawRightPanel(bigball::RenderContext& render_ctxt)
     if (ImGui::CollapsingHeader("Display"))
     {
         ImGui::Checkbox("show lines", &AttractorManager::GetStaticInstance()->m_show_lines);
+        ImGui::Checkbox("show meshes", &AttractorManager::GetStaticInstance()->m_show_meshes);
+        ImGui::Checkbox("show handles", &AttractorManager::GetStaticInstance()->m_show_handles);
     }
     
     ImGui::End();

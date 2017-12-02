@@ -27,6 +27,7 @@ AttractorManager::AttractorManager() :
 	m_mesh_shader(nullptr),
 	m_show_handles(true),
     m_show_lines(true),
+    m_show_meshes(true),
     //m_show_seeds(false),
     m_prev_mouse_left_down(false)
 {
@@ -147,8 +148,10 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
 //        m_line_shader->Unbind();
 //	}
 
-	m_mesh_shader->Bind();
+    if (m_show_meshes)
 	{
+        m_mesh_shader->Bind();
+        
 		ShaderUniform uni_world = m_mesh_shader->GetUniformLocation("world_mat");
 		ShaderUniform uni_view = m_mesh_shader->GetUniformLocation("view_mat");
 		m_mesh_shader->SetUniform(uni_view, view_mat);
@@ -202,10 +205,9 @@ void AttractorManager::DrawAttractors( struct RenderContext& render_ctxt )
                 glBindVertexArray(0);
             }
 		}
+        
+        m_mesh_shader->Unbind();
 	}
-	m_mesh_shader->Unbind();
-
-	
 }
 
 void AttractorManager::DrawHandles(struct RenderContext& render_ctxt)
@@ -390,7 +392,7 @@ void AttractorManager::SerializeAttractor(Archive& file, bool old_format)
 	if (!old_format)
 	{
 		// manage versionning
-		uint32 file_version = 1;
+		uint32 file_version = (uint32)eSaeVersion_Current;
 		file.SerializeVersion(file_version);
 	}
     

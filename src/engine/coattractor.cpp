@@ -169,7 +169,7 @@ void CoAttractor::RebuildAttractorMesh(bool force_rebuild/*, bool keep_handle*/)
         // Merge the end of the curves
         if (m_shape_params.merge_dist > 0.0f)
         {
-            SAUtils::MergeCurves(m_curves, m_shape_params);
+            SAUtils::MergeCurves(m_curves, m_shape_params, cohandle->m_handles);
         }
         
         // Adapt size
@@ -452,10 +452,17 @@ const AttractorOrientedCurve* CoAttractor::GetCurvePreview() const
 vec3 CoAttractor::GetCurveWorldPos(int32 curve_ix, int32 point_idx)
 {
     CoPosition const* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
-    AttractorOrientedCurve const& curve = m_curves[curve_ix];
+    if (curve_ix < m_curves.size())
+    {
+        AttractorOrientedCurve const& curve = m_curves[curve_ix];
     
-    vec3 world_curve_pos = copos->GetTransform().TransformPosition(curve.points[point_idx] * m_rescale_factor);
-    return world_curve_pos;
+        if(point_idx < curve.points.size())
+        {
+            vec3 world_curve_pos = copos->GetTransform().TransformPosition(curve.points[point_idx] * m_rescale_factor);
+            return world_curve_pos;
+        }
+    }
+    return vec3(0, 0, 0);
 }
 
 void CoAttractor::GetMeshRenderOffsetsWithoutPreview(ivec2& start_range, ivec2& end_range) const

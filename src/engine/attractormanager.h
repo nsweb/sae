@@ -73,6 +73,7 @@ public:
     Shader*             m_mesh_shader;
 	bool				m_show_handles;
     bool                m_show_lines;
+    bool                m_show_meshes;
     //bool				m_show_seeds;
     bool                m_prev_mouse_left_down;
 

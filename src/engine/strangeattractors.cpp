@@ -1,6 +1,7 @@
 
 #include "../sae.h"
 #include "strangeattractors.h"
+#include "cohandle.h"
 #include "system/file.h"
 #include "math/intersections.h"
 #include "math/splines.h"
@@ -87,10 +88,8 @@ static void PrintBary(SABarycenterRef const* bary, int32 bary_idx, float dist)
     BB_LOG(SAUtils, Log, str_debug.c_str());
 }
 
-void SAUtils::MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params)
+void SAUtils::MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params, const Array<AttractorHandle>& attr_handles)
 {
-    //Array<AttractorSnapRange> snap_ranges;
-    const int32 interp_spacing = shape_params.merge_span;
     const float merge_dist = shape_params.merge_dist;
     const float sq_merge_dist = merge_dist * merge_dist;
     
@@ -98,6 +97,10 @@ void SAUtils::MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeP
     for (int32 c_idx = 0; c_idx < num_curve; c_idx++)
     {
         AttractorOrientedCurve& curve = curves[c_idx];
+        AttractorHandle const& handle = attr_handles[c_idx];
+        
+        const int32 interp_spacing = (handle.m_seed.merge_span > 0 ? handle.m_seed.merge_span : shape_params.merge_span);
+        
         if(curve.points.size() <= interp_spacing*2 + 2)
             continue;
         

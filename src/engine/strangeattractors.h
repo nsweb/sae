@@ -7,6 +7,9 @@ namespace bigball
     class Archive;
 }
 
+struct AttractorSeedParams;
+struct AttractorHandle;
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 enum eAttractorType
@@ -31,6 +34,9 @@ enum eAttractorType
 enum eSaeArchiveVersion : uint32
 {
     eSaeVersion_WithMergeSpan = 1,
+    eSaeVersion_SpanPerHandle,
+    
+    eSaeVersion_Current = eSaeVersion_SpanPerHandle,
 };
 
 class StrangeAttractor
@@ -577,17 +583,6 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-struct AttractorSeedParams
-{
-    vec3 seed = vec3(1.f, 1.f, 1.f);
-    int32 iter = 2000;
-    int32 rev_iter = 0;
-    
-    bool operator == (AttractorSeedParams const& oth)
-    {
-        return seed == oth.seed && iter == oth.iter && rev_iter == oth.rev_iter;
-    }
-};
 
 struct AttractorLineParams
 {
@@ -677,30 +672,6 @@ struct AttractorShapeParams
 };
 
 //////////////////////////////////////////////////////////////////////////
-struct AttractorHandle
-{
-public:
-    AttractorHandle() : m_idx_on_curve(0)	{}
-	~AttractorHandle()	{}
-
-	bool operator == (AttractorHandle const& oth)
-	{
-		return m_seed == oth.m_seed;
-	}
-
-    /*enum eHandleType : int32
-	{
-		eHT_Move,
-		eHT_Cut,
-        eHT_Count
-	};*/
-
-	//transform	m_transform;
-	//eHandleType	m_type;
-    AttractorSeedParams m_seed;
-	int32               m_idx_on_curve;
-	//int32             m_mesh_idx;
-};
 
 struct AABB
 {
@@ -857,7 +828,7 @@ namespace SAUtils
     void		MergeLinePoints3(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
     void		MergeLinePoints4(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
     void		MergeLinePoints5(AttractorOrientedCurve const& line_framed, const Array<AttractorHandle>& attr_handles, AttractorShapeParams const& shape_params, Array<AttractorOrientedCurve>& snapped_lines);
-    void		MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params);
+    void		MergeCurves(Array<AttractorOrientedCurve>& curves, AttractorShapeParams const& shape_params, const Array<AttractorHandle>& attr_handles);
     
 	void		GenerateLocalShape( Array<vec3>& local_shape, const AttractorShapeParams& params );
 	//void		GenerateTriIndices( Array<AttractorShape>& vShapes, int32 nLocalPoints );

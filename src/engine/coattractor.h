@@ -14,7 +14,6 @@ namespace bigball
     struct ControllerInput;
 };
 
-
 class CoAttractor : public Component 
 {
 	CLASS_EQUIP_H(CoAttractor, Component)
